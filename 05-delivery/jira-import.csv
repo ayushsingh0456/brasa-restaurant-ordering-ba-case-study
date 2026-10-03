@@ -1,0 +1,1433 @@
+"Issue ID","Issue Type","Summary","Description","Acceptance Criteria","Priority","Story Points","Epic Link","Sprint","Fix Version","Labels","Components"
+"EP-01","Epic","Identity & Access","Goal: Let customers start ordering with nothing more than an email address, and give every staff member their own account with the least privilege their job needs.
+Stories: US-001, US-002, US-003, US-004, US-005, US-006, US-007 (26 points).
+Source: 05-delivery/user-stories/EP-01-identity-and-access.md","","High","","","","R1","iam","API; Customer apps; Admin Panel; Till"
+"EP-02","Epic","Branches & Pickup Slots","Goal: Promise customers only pickup times the kitchen can keep, react to trouble in the kitchen within a minute, and protect walk-in trade at the busiest hour.
+Stories: US-008, US-009, US-010, US-011, US-012, US-013 (34 points).
+Source: 05-delivery/user-stories/EP-02-branches-and-pickup-slots.md","","High","","","","R1","slots","API; Admin Panel"
+"EP-03","Epic","Menu & Catalog","Goal: Keep one accurate catalog per branch that drives the apps, the till, the kitchen timing and the POS invoices, with allergen information customers can rely on.
+Stories: US-014, US-015, US-016, US-017, US-018 (20 points).
+Source: 05-delivery/user-stories/EP-03-menu-and-catalog.md","","High","","","","R1","catalog","API; Admin Panel"
+"EP-04","Epic","Customer Ordering & Notifications","Goal: Let a customer order a customized bowl or wrap for an exact pickup minute in under a minute, know the price and the cancellation deadline before committing, and hear about the order without having to call.
+Stories: US-019, US-020, US-021, US-022, US-023, US-024, US-025, US-026, US-027, US-028, US-029 (47 points).
+Source: 05-delivery/user-stories/EP-04-customer-ordering-and-notifications.md","","High","","","","R1","ordering","API; Customer apps"
+"EP-05","Epic","Payments & Invoicing","Goal: Take every payment exactly once, through channels that keep card data out of Brasa, and give every paid order exactly one valid invoice from the branch's POS account.
+Stories: US-030, US-031, US-032, US-033, US-034, US-035 (36 points).
+Source: 05-delivery/user-stories/EP-05-payments-and-invoicing.md","","High","","","","R1","payments","API; Customer apps; Till"
+"EP-06","Epic","Till & Live Order Boards","Goal: Give the counter and the kitchen one live, trustworthy view of every order from every channel, and make walk-in orders faster to take than before.
+Stories: US-036, US-037, US-038, US-039, US-040, US-041, US-042 (40 points).
+Source: 05-delivery/user-stories/EP-06-till-and-live-order-boards.md","","High","","","","R1","till-boards","Till; Admin Panel; API"
+"US-001","Story","Sign in with an email code","As a customer, I want to sign in with a code sent to my email, so that I can order without creating or remembering a password.
+Persona: PER-01 Clara Mendes (CUS)
+Requirements: FR-IAM-01, FR-IAM-02
+Business rules: BR-001, BR-002","Scenario: US-001-AC1 First sign-in creates the account
+  Given no account exists for clara.mendes@example.com
+  When Clara enters her email in the mobile app at 11:58:00 and taps ""Send code""
+  And she enters the 6-digit code from the email at 11:59:10
+  Then she is signed in and a customer account is created with no name and no phone
+  And the code is marked used
+  And the app opens the branch list
+
+Scenario Outline: US-001-AC2 A code is valid for 10 minutes
+  Given a code was sent to Clara at 12:00:00
+  When she enters it at <time>
+  Then the result is ""<result>""
+
+  Examples:
+    | time     | result                                        |
+    | 12:09:59 | signed in                                     |
+    | 12:10:00 | signed in                                     |
+    | 12:10:01 | ""This code has expired. Send a new code.""     |
+
+Scenario Outline: US-001-AC3 Five wrong entries invalidate the code
+  Given a valid code was sent to Clara
+  When she enters a wrong code for the <attempt> time
+  Then the message is ""<message>""
+
+  Examples:
+    | attempt | message                                          |
+    | 1st     | This code is not correct. You have 4 tries left. |
+    | 4th     | This code is not correct. You have 1 try left.   |
+    | 5th     | Too many wrong codes. Send a new code.           |
+
+Scenario: US-001-AC4 A new code replaces the old one and requests are limited
+  Given Clara requested a code at 12:00:00
+  Then ""Send a new code"" stays disabled until 12:01:00
+  When she requests a new code at 12:01:00
+  Then the 12:00:00 code no longer signs her in
+  And when she has requested 5 codes since 11:41:00 a sixth request at 12:20:00 is refused with ""You have asked for 5 codes in the last hour. Try again at 12:41 or use a different email.""
+
+Scenario: US-001-AC5 A staff email gets the neutral response and no code
+  Given amir.haddad@brasa.example belongs to a Counter Staff account
+  When it is entered in the customer app
+  Then the app shows the same ""Check your email for a 6-digit code"" screen as for any address
+  And no code is sent and no customer account is created
+
+Scenario: US-001-AC6 A suspended customer cannot get a code
+  Given Tomasz's account is Suspended
+  When he enters his email and taps ""Send code""
+  Then no code is sent
+  And the app shows ""This account is suspended. Contact the branch or support@example.com.""","High","5","EP-01","Brasa S1","R1","iam","API; Customer apps; Admin Panel; Till"
+"US-002","Story","Browse the menu as a guest","As a first-time visitor, I want to look at a branch's menu, prices and allergens before I sign in, so that I can decide whether Brasa suits my team before giving my email.
+Persona: PER-02 Tomasz Nowak (GST)
+Requirements: FR-IAM-03
+Business rules: none","Scenario: US-002-AC1 Guest browses in the mobile app
+  Given Tomasz opened the mobile app for the first time and tapped ""Browse without signing in""
+  When he selects LOC-04 Campus
+  Then he sees the categories, products, prices and allergens of Campus
+  And no sign-in is requested
+
+Scenario: US-002-AC2 Guest browses on the web panel
+  Given Tomasz opens the web ordering panel without signing in
+  When he selects LOC-04 Campus
+  Then he sees the same menu, prices and allergens as a signed-in customer
+
+Scenario: US-002-AC3 Adding to the cart asks for sign-in and keeps the choices
+  Given Tomasz is a guest and has customized a Falafel Wrap without Red onion and with Feta
+  When he taps ""Add to cart""
+  Then he is asked to sign in with his email
+  And after signing in, the Falafel Wrap without Red onion and with Feta is in his Campus cart
+
+Scenario: US-002-AC4 Guests have no cart or order history
+  Given Tomasz is a guest
+  When he opens the Cart or Orders tab
+  Then he sees ""Sign in to see your cart and orders"" with a ""Sign in"" button","Medium","2","EP-01","Brasa S2","R1","iam","API; Customer apps; Admin Panel; Till"
+"US-003","Story","Sign in to the Admin Panel securely","As an Administrator, I want staff sign-in to the Admin Panel to be protected by strong passwords, lockout and a second factor for administrators, so that a stolen password cannot change prices, refunds or payment settings.
+Persona: PER-06 Paul Lindqvist (ADM)
+Requirements: FR-IAM-04, FR-IAM-10
+Business rules: BR-001, BR-006","Scenario: US-003-AC1 Administrator signs in with a second factor
+  Given Paul's account has an enrolled authenticator app
+  When he enters his email and password and then a valid 6-digit TOTP code
+  Then he is signed in to the Admin Panel with all menus
+  And the sign-in is recorded with time, IP address and device
+
+Scenario: US-003-AC2 Manager lands on the boards of assigned branches
+  Given Marta is a Manager assigned to LOC-02 Station Quarter
+  When she signs in with email and password
+  Then she sees the kitchen board, counter board and settings of Station Quarter only
+
+Scenario: US-003-AC3 A customer account cannot use the Admin Panel
+  When clara.mendes@example.com is entered with any password
+  Then the response is ""Email or password is not correct.""
+  And no session is created
+
+Scenario Outline: US-003-AC4 Five failed sign-ins lock the account for 15 minutes
+  Given Marta has failed to sign in <failures> times in a row, the last at 09:00:00
+  When she signs in with the correct password at <time>
+  Then the result is ""<result>""
+
+  Examples:
+    | failures | time     | result                                                      |
+    | 4        | 09:00:30 | signed in                                                   |
+    | 5        | 09:14:59 | ""Too many attempts. Try again at 09:15 or reset your password."" |
+    | 5        | 09:15:00 | signed in                                                   |
+
+Scenario Outline: US-003-AC5 Password policy
+  When Paul sets a new password ""<password>""
+  Then the result is ""<result>""
+
+  Examples:
+    | password                 | result                                                         |
+    | grill-bowl-7             | rejected: ""Use at least 12 characters.""                        |
+    | grill-bowl-77            | accepted                                                       |
+    | password1234             | rejected: ""This password appears in a known data breach. Choose another."" |
+
+Scenario: US-003-AC6 Password reset link is single use and valid for 30 minutes
+  Given Marta requested a reset at 08:00:00
+  Then the response is the same whether or not the email exists
+  And the link works until 08:30:00 and only once
+  And at 08:30:01 it shows ""This link has expired. Request a new one.""","High","5","EP-01","Brasa S1","R1","iam","API; Customer apps; Admin Panel; Till"
+"US-004","Story","Sign in to the till for my branch","As counter staff, I want to sign in to the till with my own account and pick my branch, so that the orders I take carry my initials and color and my branch's menu and queue load.
+Persona: PER-03 Amir Haddad (CST)
+Requirements: FR-IAM-05
+Business rules: BR-004","Scenario: US-004-AC1 Counter Staff signs in and picks an assigned branch
+  Given Amir is Counter Staff assigned to LOC-01 Market Hall
+  When he signs in on Till 1 at Market Hall
+  Then the branch list shows Market Hall only
+  And after selecting it, the till loads the Market Hall menu, payment methods and live queue
+
+Scenario: US-004-AC2 Administrator accounts are refused at the till
+  When Paul signs in to the till with his Administrator account
+  Then sign-in is refused with ""Administrator accounts cannot use the till. Sign in with your own till account.""
+
+Scenario: US-004-AC3 Only active assigned branches are offered
+  Given Marta is assigned to LOC-02 and LOC-03 and LOC-03 Riverside is deactivated
+  When she signs in to a till
+  Then only Station Quarter is offered
+
+Scenario Outline: US-004-AC4 A till session lasts at most 14 hours
+  Given Amir signed in to Till 1 at 10:30
+  When he taps a product tile at <time>
+  Then the result is ""<result>""
+
+  Examples:
+    | time  | result                                                       |
+    | 00:29 | the dialog opens                                             |
+    | 00:30 | ""Your session has ended. Sign in again."" and the draft is kept on this iPad |
+
+Scenario: US-004-AC5 Two iPads with the same account keep separate drafts
+  Given Amir is signed in on Till 1 and Till 2 at Market Hall
+  When he adds a Chicken Wrap on Till 1 and a Beef Brasa Bowl on Till 2
+  Then Till 1 shows only the Chicken Wrap and Till 2 only the Beef Brasa Bowl","High","3","EP-01","Brasa S2","R1","iam","API; Customer apps; Admin Panel; Till"
+"US-005","Story","Manage employee accounts, roles and colors","As an Administrator, I want to create staff accounts with a fixed role, assigned branches and a board color, so that everyone signs in as themselves, sees only their branches, and the kitchen can tell who took an order.
+Persona: PER-06 Paul Lindqvist (ADM)
+Requirements: FR-IAM-06, FR-IAM-07
+Business rules: BR-003, BR-005, BR-007","Scenario: US-005-AC1 Create a Counter Staff account
+  When Paul creates ""Jonas Berg"", jonas.berg@brasa.example, role Counter Staff, branch Market Hall, color Purple, initials JB
+  Then the account is Active and Jonas can sign in to the till at Market Hall
+  And Jonas cannot sign in to the Admin Panel
+
+Scenario: US-005-AC2 Board colors are unique among active employees
+  Given Amir (active) has the color Teal
+  When Paul gives Teal to a new employee
+  Then saving is refused with ""Teal is already used by Amir H. Choose another color.""
+
+Scenario: US-005-AC3 One email, one account
+  When Paul creates an employee with clara.mendes@example.com
+  Then saving is refused with ""This email already belongs to an account. Use a different email.""
+
+Scenario: US-005-AC4 The role cannot be changed after creation
+  When Paul edits Jonas's account
+  Then the Role field is shown but disabled with ""The role cannot be changed later.""
+  And a PATCH request that includes a role returns 422 with code ROLE_IMMUTABLE
+
+Scenario: US-005-AC5 Deactivation ends sessions within 60 seconds
+  Given Jonas is signed in on Till 2 at 14:00:00
+  When Paul deactivates Jonas at 14:00:10
+  Then by 14:01:10 Till 2 shows ""You have been signed out"" and returns to sign-in
+  And Jonas cannot sign in again
+
+Scenario: US-005-AC6 Branch scope is enforced on the server
+  Given Marta is a Manager assigned to Station Quarter only
+  When her browser requests the Market Hall board snapshot or joins the Market Hall live room
+  Then the request returns 403 with code BRANCH_NOT_ASSIGNED and the room join is refused","High","5","EP-01","Brasa S1","R1","iam","API; Customer apps; Admin Panel; Till"
+"US-006","Story","Manage or delete my account","As a customer, I want to change my details, sign out of one device and delete my account, so that I stay in control of my data.
+Persona: PER-01 Clara Mendes (CUS)
+Requirements: FR-IAM-09
+Business rules: BR-008, BR-043","Scenario: US-006-AC1 Edit name and phone
+  When Clara changes her name to ""Clara M."" and adds a mobile number in international format
+  Then both are saved and the counter board shows ""Clara M."" on her next order
+
+Scenario: US-006-AC2 Signing out removes only this device's push token
+  Given Clara is signed in on her phone and her tablet with push allowed on both
+  When she signs out on the tablet
+  And her order MH-0142 is marked Ready
+  Then the push arrives on the phone only
+
+Scenario: US-006-AC3 Delete an account with no open orders
+  Given Clara has no open orders
+  When she confirms ""Delete my account""
+  Then she is signed out on all devices and cannot sign in with her old account
+  And her name, email and phone are erased within 30 days
+  And her past orders and invoices remain without her personal data
+
+Scenario: US-006-AC4 Deletion waits for open orders
+  Given Clara has order MH-0142 for 12:31 today, status Queued
+  When she taps ""Delete my account""
+  Then deletion is refused with ""You have an order for 12:31 today. Collect or cancel it before deleting your account.""
+
+Scenario Outline: US-006-AC5 Profile field validation
+  When Clara saves name ""<name>"" and phone ""<phone>""
+  Then the result is ""<result>""
+
+  Examples:
+    | name    | phone                 | result                                                          |
+    | Clara   | (empty)               | saved                                                           |
+    | (empty) | (empty)               | rejected: ""Enter the first name we should call at the counter."" |
+    | Clara   | 0470 000 000          | rejected: ""Enter the mobile number with its country code, starting with +."" |","High","3","EP-01","Brasa S5","R1","iam","API; Customer apps; Admin Panel; Till"
+"US-007","Story","Review, suspend and reinstate customers","As an Administrator, I want to find a customer, see their status and suspend, reinstate or clear Prepay-only with a reason, so that I can handle abuse and disputes fairly and with a record.
+Persona: PER-06 Paul Lindqvist (ADM)
+Requirements: FR-IAM-08
+Business rules: BR-041","Scenario: US-007-AC1 Find a customer and see their status
+  When Paul searches ""mendes""
+  Then he sees Clara Mendes with email, phone, created date, last order date and status ""Active""
+  And no order contents or spend are shown on the customer screen
+
+Scenario: US-007-AC2 Suspend a customer with a reason
+  Given Tomasz is signed in on the web panel
+  When Paul suspends Tomasz with reason ""Abusive messages to staff""
+  Then within 60 seconds Tomasz's sessions end and he cannot request a sign-in code
+  And the audit log records Paul, the reason and the time
+
+Scenario: US-007-AC3 Reinstate a suspended customer
+  When Paul reinstates Tomasz with reason ""Resolved by phone""
+  Then Tomasz can request a code and sign in again
+
+Scenario: US-007-AC4 Clear Prepay-only early
+  Given customer Ana Sousa is Prepay-only until 2026-10-16 after order SQ-0098 became a no-show on 2026-09-16
+  When Paul clears Prepay-only with reason ""Order was handed over, staff did not mark it""
+  Then Ana can choose ""Pay at the counter"" on her next order
+  And the no-show on SQ-0098 stays in the order history with Paul's note
+
+Scenario: US-007-AC5 Managers cannot open customer administration
+  When Marta opens the customers screen or calls GET /v1/customers
+  Then the menu item is not shown and the API returns 403","High","3","EP-01","Brasa S5","R1","iam;cr","API; Customer apps; Admin Panel; Till"
+"US-008","Story","Set up a branch with opening and rush hours","As an Administrator, I want to set up each branch with its weekly opening hours, rush window and closure dates, so that the apps and the slot engine know when each kitchen is open and when extra staff are on the line.
+Persona: PER-06 Paul Lindqvist (ADM)
+Requirements: FR-BRN-01, FR-BRN-02, FR-BRN-03
+Business rules: BR-009","Scenario: US-008-AC1 Create a branch
+  When Paul creates ""Campus"", code CP, with Mon-Fri 11:00-17:00, rush 11:45-13:30, and Saturday and Sunday closed
+  Then LOC-04 Campus appears in the customer apps and on the till in its display position
+  And on a Saturday the apps show ""Campus is closed today""
+
+Scenario Outline: US-008-AC2 Opening and rush hours must be chronological
+  When Paul saves Monday with open <open>, close <close>, rush <rush>
+  Then the result is ""<result>""
+
+  Examples:
+    | open  | close | rush          | result                                                                       |
+    | 11:00 | 21:00 | 11:45-13:30   | saved                                                                        |
+    | 11:00 | 21:00 | (none)        | saved                                                                        |
+    | 11:00 | 21:00 | 10:30-12:00   | ""Rush hours must sit inside opening hours (11:00-21:00) and end after they start."" |
+    | 11:00 | 21:00 | 13:30-13:30   | ""Rush hours must sit inside opening hours (11:00-21:00) and end after they start."" |
+    | 11:00 | 21:00 | 11:45-(empty) | ""Set both rush times or neither.""                                            |
+    | 11:00 | 11:00 | (none)        | ""Closing time must be after opening time (11:00).""                           |
+
+Scenario: US-008-AC3 A closure date overrides the weekly hours
+  Given Market Hall is open on Thursdays
+  When Paul records Thursday 2026-12-24 as a closure date
+  Then on 2026-12-24 the customer apps show ""Market Hall is closed today"" and offer no pickup times
+  And the till at Market Hall can still sell, with every order flagged Overbooked
+
+Scenario: US-008-AC4 A branch with open orders cannot be deactivated
+  Given Station Quarter has 4 open orders today
+  When Paul deactivates Station Quarter
+  Then deactivation is refused with ""Station Quarter has 4 open orders today. Deactivate it after they are closed.""
+
+Scenario: US-008-AC5 Deactivation removes the branch everywhere at once
+  Given Riverside has no open orders
+  When Paul deactivates Riverside
+  Then within 2 seconds Riverside disappears from the branch lists of both customer apps and the till
+  And customers who had Riverside selected are asked to choose another branch","High","5","EP-02","Brasa S1","R1","slots","API; Admin Panel"
+"US-009","Story","Tune a branch's order timings","As a branch Manager, I want to change the online lead time and cancellation cutoff of my branch, so that I can match promises to the staff I have today.
+Persona: PER-05 Marta Kowalska (MGR)
+Requirements: FR-BRN-04
+Business rules: BR-010, BR-014","Scenario: US-009-AC1 A longer lead time applies to the next pickup list
+  Given Station Quarter's lead time is 10 minutes
+  When Marta changes it to 20 minutes at 12:00
+  And a customer opens the pickup sheet at 12:00:30
+  Then the earliest offered minute is 12:21 (12:00:30 + 20 min = 12:20:30, rounded up)
+
+Scenario Outline: US-009-AC2 Lead time range
+  When Marta saves a lead time of <minutes> minutes
+  Then the result is ""<result>""
+
+  Examples:
+    | minutes | result                                           |
+    | 4       | ""Enter a lead time between 5 and 60 minutes.""    |
+    | 5       | saved                                            |
+    | 60      | saved                                            |
+    | 61      | ""Enter a lead time between 5 and 60 minutes.""    |
+
+Scenario: US-009-AC3 Kitchen factors are for Administrators only
+  When Marta opens Station Quarter's timings
+  Then minutes per kitchen unit, rush factor and online order limit are read-only
+  And a PATCH of any of them by Marta returns 403
+
+Scenario: US-009-AC4 Placed orders keep the cutoff they were placed with
+  Given order SQ-0150 was placed with a 15-minute cutoff for 13:00
+  When Marta changes the cutoff to 30 minutes at 12:35
+  Then SQ-0150 can still be canceled by the customer until 12:45
+  And new orders use the 30-minute cutoff
+
+Scenario Outline: US-009-AC5 Online order limit
+  Given the online order limit is 30 kitchen units
+  When a customer's cart has <units> kitchen units
+  Then pickup times are <offered>
+
+  Examples:
+    | units | offered                                                                        |
+    | 30    | offered                                                                        |
+    | 31    | not offered: ""Orders over 30 bowls and wraps need a call to the branch so the kitchen can plan."" |","High","3","EP-02","Brasa S2","R1","slots","API; Admin Panel"
+"US-010","Story","Connect a branch to the POS provider","As an Administrator, I want to connect each branch to its own account at the cloud POS and invoicing provider, so that the till can take payments with the branch's methods and every paid order gets a valid invoice.
+Persona: PER-06 Paul Lindqvist (ADM)
+Requirements: FR-BRN-05
+Business rules: none","Scenario: US-010-AC1 Connect a branch and import payment methods
+  Given Market Hall's POS account has the methods ""Cash"", ""Card (provider)"", ""Voucher"" and ""Bank transfer""
+  When Paul clicks ""Connect POS account"" and grants access on the provider's page
+  Then Market Hall shows ""Connected to POS account Market Hall (Brasa Grill)""
+  And the methods ""Cash"" and ""Card (provider)"" are imported
+  And ""Voucher"" and ""Bank transfer"" are listed as ""Not used by Brasa""
+
+Scenario: US-010-AC2 Expired access raises an alert without stopping trade
+  Given Riverside's POS access token has expired
+  When a paid order at Riverside needs an invoice
+  Then the order stays paid and the invoice waits in the outbox
+  And Riverside shows ""Reconnect needed"" and Administrators receive an email alert within 5 minutes
+
+Scenario: US-010-AC3 Reconnecting releases the waiting invoices
+  Given 6 invoices for Riverside are waiting because access expired
+  When Paul reconnects Riverside
+  Then the 6 invoices are raised within 15 minutes, each exactly once
+
+Scenario: US-010-AC4 Managers cannot change the POS connection
+  When Marta opens Station Quarter's settings
+  Then the POS connection section is not shown
+  And POST /v1/branches/LOC-02/pos-connection by Marta returns 403","High","5","EP-02","Brasa S3","R1","slots","API; Admin Panel"
+"US-011","Story","Offer only pickup times the kitchen can meet","As a customer on a short lunch break, I want to see only pickup minutes the kitchen can actually meet, so that my food is ready when I arrive.
+Persona: PER-01 Clara Mendes (CUS)
+Requirements: FR-BRN-06, FR-BRN-07, FR-BRN-08, FR-BRN-11
+Business rules: BR-010, BR-011, BR-012, BR-013, BR-017, BR-020","Scenario: US-011-AC1 Canonical rush-hour calculation (WE-2)
+  Given it is Friday 2026-09-18 at Market Hall, rush 11:45-13:30, lead time 10 min, 1.0 minute per unit, rush factor 0.5
+  And kitchen minutes are held by MH-0131 (12:12-12:14), MH-0133 (12:15-12:17), MH-0134 (12:18), MH-0136 (12:19-12:22) and MH-0138 (12:24-12:25)
+  And Clara's cart holds 1 Chicken Grill Bowl, 2 Chicken Wraps and 1 Sparkling lemonade (3 kitchen units)
+  When she opens the pickup sheet at 12:04:20
+  Then her order needs 2 kitchen minutes (ceil(3 x 1.0 x 0.5))
+  And every minute from 12:15 to 12:27 is unavailable
+  And 12:28 is the first available minute
+  When she chooses 12:31 and places the order
+  Then order MH-0142 holds kitchen minutes 12:29-12:30
+  And its cancellation deadline is 12:16
+
+Scenario Outline: US-011-AC2 Kitchen minutes depend on units and the rush window
+  When an order with <units> kitchen units is priced for pickup at <pickup>
+  Then it needs <minutes> kitchen minutes
+
+  Examples:
+    | units | pickup | minutes |
+    | 0     | 12:30  | 0       |
+    | 1     | 12:30  | 1       |
+    | 3     | 13:29  | 2       |
+    | 3     | 13:30  | 3       |
+    | 7     | 12:23  | 4       |
+    | 30    | 15:00  | 30      |
+
+Scenario Outline: US-011-AC3 Lead time boundary
+  Given the lead time is 10 minutes and nothing is booked
+  When Clara opens the pickup sheet at <now>
+  Then the earliest offered minute is <earliest>
+
+  Examples:
+    | now      | earliest |
+    | 12:05:00 | 12:15    |
+    | 12:05:01 | 12:16    |
+
+Scenario: US-011-AC4 Two customers cannot take the same kitchen minutes
+  Given Clara and another customer both see 12:28 as available for a 2-minute order
+  When the other customer places first and Clara places one second later
+  Then only one order holds kitchen minutes 12:26-12:27
+  And Clara sees ""12:28 was just taken. Choose another time."" with a refreshed list
+
+Scenario: US-011-AC5 A cancellation frees kitchen minutes for everyone at once
+  Given Clara has the pickup sheet open at 12:06 with the WE-2 bookings
+  When MH-0136 (pickup 12:23, kitchen 12:19-12:22) is canceled
+  Then within 2 seconds her sheet shows 12:21, 12:22, 12:23 and 12:24 as available
+
+Scenario: US-011-AC6 The server clock decides, not the phone
+  Given Clara's phone clock shows 12:20 while the server time is 12:04:20
+  When she opens the pickup sheet
+  Then the earliest offered minute is still 12:15 or later per the bookings","High","8","EP-02","Brasa S2","R1","slots","API; Admin Panel"
+"US-012","Story","Hold back pickup times when the kitchen is in trouble","As a branch Manager, I want to block pickup times when equipment fails and have the system hold back capacity while the kitchen is late, so that we stop promising times we cannot keep.
+Persona: PER-05 Marta Kowalska (MGR)
+Requirements: FR-BRN-09, FR-BRN-10
+Business rules: BR-015, BR-016","Scenario: US-012-AC1 A busy window blocks new orders only
+  Given order SQ-0230 is booked for 15:10
+  When Marta sets a busy window 15:00-15:30 at 14:05 with reason ""Equipment""
+  Then no new order can hold a kitchen minute from 15:00 to 15:29
+  And a 2-minute order is unavailable at 15:31 (kitchen 15:29-15:30) and available at 15:32 (kitchen 15:30-15:31)
+  And SQ-0230 keeps its pickup time of 15:10
+
+Scenario Outline: US-012-AC2 Busy window validation
+  Given it is 14:05 and Station Quarter closes at 21:00
+  When Marta saves a busy window <start>-<end> with reason <reason>
+  Then the result is ""<result>""
+
+  Examples:
+    | start | end   | reason          | result                                                         |
+    | 15:00 | 15:30 | Equipment       | saved                                                          |
+    | 15:30 | 15:00 | Equipment       | ""End must be after the start.""                                 |
+    | 13:00 | 13:30 | Staffing        | ""Start must be between now (14:05) and closing time (21:00).""  |
+    | 20:30 | 21:30 | Supplies        | ""End must be no later than closing time (21:00).""              |
+    | 16:00 | 16:30 | Other (no note) | ""Add a short note when the reason is Other.""                   |
+
+Scenario: US-012-AC3 Saving a second window replaces the first
+  Given today's busy window is 15:00-15:30
+  When Marta saves 16:00-16:45
+  Then she is asked ""Replace today's busy window 15:00-15:30 with 16:00-16:45?""
+  And after confirming, 15:00-15:30 is available again for new orders
+
+Scenario: US-012-AC4 Delay protection blocks capacity while an order is late
+  Given order SQ-0210 for 12:40 is not Ready at 12:43:00
+  And the earliest online pickup is 12:53 and kitchen minute 12:55 is held by another order
+  Then the next 3 free kitchen minutes, 12:53, 12:54 and 12:56, are blocked
+  And the boards show ""Delay block: 3 min (SQ-0210 late +3)""
+
+Scenario: US-012-AC5 Delay protection releases itself and is capped
+  Given SQ-0210 is late and 3 kitchen minutes are blocked
+  When SQ-0210 is marked Ready at 12:45 and no other order is late
+  Then the block is released within 1 minute
+  And when an order is 26 minutes late, at most 20 kitchen minutes are blocked
+
+Scenario: US-012-AC6 A Manager can release the delay block early
+  When Marta taps ""Release"" on the delay block
+  Then the blocked minutes become available at once
+  And the block stays released for the orders that were late at that moment
+  And the audit log records Marta, the time and the minutes released","High","5","EP-02","Brasa S5","R1","slots","API; Admin Panel"
+"US-013","Story","Keep rush-hour capacity for walk-in customers","As a branch Manager, I want online pre-orders to leave part of each rush quarter-hour free until shortly before it starts, so that walk-in customers at the counter are not told to wait 25 minutes while the line is full of orders placed an hour ago.
+Persona: PER-05 Marta Kowalska (MGR)
+Requirements: FR-BRN-12
+Business rules: BR-018","Scenario: US-013-AC1 The online cap blocks a minute the kitchen still has free
+  Given it is Friday 2026-10-02 at 12:02:00 at Station Quarter, rush 11:45-13:30, online share 60%
+  And in the 12:30-12:44 block online orders hold 8 kitchen minutes and till orders hold 3
+  And kitchen minutes 12:39, 12:40, 12:41 and 12:44 are free
+  When a customer opens the pickup sheet with a 2-minute cart
+  Then 12:41 (kitchen 12:39-12:40) and 12:42 (kitchen 12:40-12:41) are unavailable because the block would hold 10 online minutes, over the cap of 9
+
+Scenario: US-013-AC2 An order can straddle two blocks within both caps
+  Given the same bookings and 12:45 is free with 4 online minutes held in the 12:45-12:59 block
+  When the customer views 12:46 (kitchen 12:44-12:45)
+  Then 12:46 is available: 9 of 9 online minutes in the 12:30 block and 5 of 9 in the 12:45 block
+
+Scenario Outline: US-013-AC3 The reserve is released 20 minutes before the block
+  Given the same bookings
+  When the customer opens the pickup sheet at <now>
+  Then 12:41 is <result>
+
+  Examples:
+    | now      | result      |
+    | 12:09:59 | unavailable |
+    | 12:10:00 | available   |
+
+Scenario: US-013-AC4 The till is never throttled
+  Given it is 12:05:00 and the 12:30 block is not yet released
+  When Noor takes a walk-in order needing 2 kitchen minutes and chooses 12:41
+  Then the order is placed with kitchen minutes 12:39-12:40
+
+Scenario: US-013-AC5 No throttle outside the rush window
+  Given rush ends at 13:30
+  When a customer views pickup minutes whose kitchen minutes are 13:30 or later
+  Then only the ordinary availability checks apply
+
+Scenario Outline: US-013-AC6 Throttle settings are for Administrators
+  When <user> saves an online share of <share>
+  Then the result is ""<result>""
+
+  Examples:
+    | user  | share | result                                             |
+    | Paul  | 60%   | saved                                              |
+    | Paul  | 100%  | saved; the throttle is off at this branch          |
+    | Paul  | 35%   | ""Enter an online share between 40% and 100%.""      |
+    | Marta | 60%   | 403: only Administrators can change the throttle   |","High","8","EP-02","Brasa S11","R1.2","slots;cr","API; Admin Panel"
+"US-014","Story","Maintain categories and products for a branch","As an Administrator, I want to maintain each branch's categories and products with prices, VAT rates and kitchen-time flags, so that every channel sells the same items at the right price and the slot engine knows what the kitchen has to make.
+Persona: PER-06 Paul Lindqvist (ADM)
+Requirements: FR-MNU-01, FR-MNU-02, FR-MNU-05
+Business rules: BR-011, BR-024, BR-026","Scenario: US-014-AC1 Categories decide what counts as kitchen time
+  Given Market Hall has ""Grill Bowls"" counting toward kitchen time and ""Drinks"" not counting
+  When a cart holds 1 Chicken Grill Bowl and 2 Sparkling lemonades
+  Then the cart has 1 kitchen unit
+
+Scenario: US-014-AC2 Create a product
+  When Paul creates ""Chicken Grill Bowl"" in Grill Bowls at Market Hall with price 9.40, takeaway VAT 10%, dine-in VAT 10%, ingredients Rice, Chicken, Red onion, Coriander, Tomato, Tzatziki and add-ons Halloumi, Extra chicken, Feta, Avocado, Garlic sauce
+  Then the product appears in both customer apps and on the Market Hall till in its display position
+
+Scenario: US-014-AC3 A product hidden from the apps can still be sold at the counter
+  When Paul creates ""Staff meal bowl"" with ""Show in customer apps"" off
+  Then it does not appear in either customer app
+  And it appears as a tile on the Market Hall till
+
+Scenario Outline: US-014-AC4 Deposit rules
+  When Paul sets the deposit of <product> to <deposit>
+  Then the result is ""<result>""
+
+  Examples:
+    | product            | deposit                         | result                                                       |
+    | Still water 0.5 l  | Bottle deposit 0.25             | saved                                                        |
+    | Bottle deposit 0.25| Bottle deposit 0.25             | ""A product cannot be its own deposit.""                       |
+    | Bottle deposit 0.25| Crate deposit 1.50              | ""A deposit product cannot carry another deposit.""            |
+
+Scenario Outline: US-014-AC5 Price validation
+  When Paul saves a price of <price>
+  Then the result is ""<result>""
+
+  Examples:
+    | price  | result                                                  |
+    | -0.10  | ""Enter a price between 0.00 and 200.00.""                |
+    | 0.00   | saved                                                   |
+    | 9.40   | saved                                                   |
+    | 200.01 | ""Enter a price between 0.00 and 200.00.""                |
+
+Scenario: US-014-AC6 Price changes never touch placed orders
+  Given order MH-0142 was placed with the Chicken Grill Bowl at 9.40
+  When Paul changes the price to 9.60
+  Then MH-0142 still shows 9.40
+  And carts are re-priced at 9.60 the next time they are viewed (BR-027)","High","5","EP-03","Brasa S1","R1","catalog","API; Admin Panel"
+"US-015","Story","Maintain shared ingredients and add-ons","As an Administrator, I want one shared list of ingredients and add-ons with their allergens, so that I maintain allergen data once and every branch's products use it.
+Persona: PER-06 Paul Lindqvist (ADM)
+Requirements: FR-MNU-03, FR-MNU-04
+Business rules: BR-021, BR-022","Scenario: US-015-AC1 Ingredients have allergens and no price
+  When Paul creates the ingredient ""Tzatziki"" with the allergen Milk
+  Then the ingredient form has no price field
+  And ""Tzatziki"" can be attached to products of any branch as removable
+
+Scenario: US-015-AC2 Add-ons have a price and allergens
+  When Paul creates the add-on ""Halloumi"" with price 1.50 and the allergen Milk
+  And attaches it to the Chicken Grill Bowl
+  Then customers can add Halloumi to that bowl for 1.50 per bowl
+
+Scenario: US-015-AC3 Retiring an add-on updates carts that contain it
+  Given Clara's cart has a Chicken Grill Bowl with Halloumi and Garlic sauce
+  When Paul deactivates Halloumi
+  Then Halloumi disappears from every customization screen
+  And the next time Clara views her cart the line shows ""Halloumi is no longer available and was removed. Price updated to 9.90.""
+
+Scenario Outline: US-015-AC4 Names are unique
+  Given the add-on ""Garlic sauce"" exists
+  When Paul creates an add-on named ""<name>""
+  Then the result is ""<result>""
+
+  Examples:
+    | name          | result                                                 |
+    | Chili sauce   | saved                                                  |
+    | garlic sauce  | ""An add-on called Garlic sauce already exists.""        |
+    | Garlic sauce  | ""An add-on called Garlic sauce already exists.""        |","High","3","EP-03","Brasa S1","R1","catalog","API; Admin Panel"
+"US-016","Story","Keep products in step with the POS","As an Administrator, I want each product and add-on to exist as an article in the branch's POS account with the same name, price, VAT rate and status, so that invoices and the POS reports match what Brasa sold.
+Persona: PER-06 Paul Lindqvist (ADM)
+Requirements: FR-MNU-06
+Business rules: none","Scenario: US-016-AC1 A new product creates its POS article
+  Given Market Hall is connected to its POS account
+  When Paul creates ""Beef Brasa Bowl"" at 10.90 with no article mapping
+  Then within 5 minutes an article ""Beef Brasa Bowl"" at 10.90 and 10% exists in the Market Hall POS account
+  And the product shows ""Linked to POS article 4417""
+
+Scenario: US-016-AC2 Price and VAT changes are pushed
+  When Paul changes the Beef Brasa Bowl price to 11.20
+  Then the POS article shows 11.20 within 5 minutes
+
+Scenario: US-016-AC3 Deactivation is pushed
+  When Paul deactivates the Beef Brasa Bowl
+  Then the POS article is deactivated within 5 minutes
+
+Scenario: US-016-AC4 A failed sync is visible and does not stop sales
+  Given the Market Hall POS account has no 13% VAT rate configured
+  When Paul saves a product with a dine-in VAT rate of 13%
+  Then the product shows ""POS sync failed: VAT rate 13% is not set up in the POS account""
+  And Administrators receive an alert
+  And the product can still be sold; its invoices wait in the outbox until the sync succeeds","High","5","EP-03","Brasa S5","R1","catalog","API; Admin Panel"
+"US-017","Story","See allergens before I order","As a customer ordering lunch for my team, I want to see the allergens of each item, including the extras I add, before I put it in the cart, so that I can order safely for a colleague with a sesame allergy.
+Persona: PER-02 Tomasz Nowak (CUS)
+Requirements: FR-MNU-07
+Business rules: BR-028","Scenario: US-017-AC1 Allergens on the product card and detail
+  When Tomasz views the Falafel Wrap at Campus
+  Then the card shows allergen icons with text labels
+  And the detail lists ""Contains: gluten, sesame""
+
+Scenario: US-017-AC2 Selected add-ons add their allergens; removals do not take them away
+  Given the Falafel Wrap includes Tahini dressing (sesame)
+  When Tomasz removes Tahini dressing and adds Feta (milk)
+  Then the item shows ""Contains: gluten, milk, sesame""
+  And the note ""Removing an ingredient does not make this item free from its allergens."" is shown
+
+Scenario: US-017-AC3 A product cannot go live without confirmed allergens
+  When Paul activates a product whose allergens have never been confirmed
+  Then activation is refused with ""Confirm the allergens for this product. Select None if it contains none.""
+
+Scenario: US-017-AC4 Allergens are the same on the web panel
+  When Tomasz views the Falafel Wrap on the web panel
+  Then the allergens shown are identical to the mobile app","High","5","EP-03","Brasa S4","R1","catalog;cr","API; Admin Panel"
+"US-018","Story","Mark an item sold out for today","As a branch Manager, I want to mark a product sold out for the rest of the day, so that customers stop ordering what the kitchen cannot make.
+Persona: PER-05 Marta Kowalska (MGR)
+Requirements: FR-MNU-08
+Business rules: none","Scenario: US-018-AC1 Sold out in every channel
+  When Marta marks the Halloumi Veggie Bowl sold out at Station Quarter at 14:10
+  Then within 2 seconds both customer apps show it as ""Sold out today"" and it cannot be added
+  And its tile on the Station Quarter tills is dimmed and cannot be tapped
+
+Scenario: US-018-AC2 Carts with a sold-out item cannot be placed
+  Given a customer's Station Quarter cart has a Halloumi Veggie Bowl
+  When the customer places the order
+  Then placement is refused with ""Halloumi Veggie Bowl is sold out today. Remove it to continue.""
+
+Scenario Outline: US-018-AC3 Sold out resets at the start of the next day
+  Given Marta marked the bowl sold out on 2026-09-18
+  When a customer views it at <time>
+  Then it is <state>
+
+  Examples:
+    | time             | state                |
+    | 2026-09-18 23:59 | sold out             |
+    | 2026-09-19 00:00 | available            |
+
+Scenario: US-018-AC4 Placed orders are not affected
+  Given order SQ-0188 with a Halloumi Veggie Bowl was placed at 13:50
+  When the bowl is marked sold out at 14:10
+  Then SQ-0188 is unchanged and stays on the kitchen board
+
+Scenario: US-018-AC5 Counter Staff cannot mark items sold out
+  When Noor long-presses a tile on the till
+  Then no sold-out option is offered
+  And PUT /v1/products/{productId}/availability by Noor returns 403","Medium","2","EP-03","Brasa S6","R1","catalog","API; Admin Panel"
+"US-019","Story","Choose a branch and browse its menu","As a customer, I want to pick the branch near my office and browse its menu with prices and availability, so that I only see what I can actually order there today.
+Persona: PER-01 Clara Mendes (CUS)
+Requirements: FR-ORD-01, FR-ORD-02
+Business rules: none","Scenario: US-019-AC1 Branch list with today's hours
+  When Clara opens the branch list on Saturday 2026-09-19 at 12:10
+  Then the branches appear in the Administrator's order: Market Hall, Station Quarter, Riverside, Campus
+  And Market Hall shows ""Open today 12:00-21:00""
+  And Campus shows ""Closed today""
+
+Scenario: US-019-AC2 The selected branch is remembered
+  Given Clara selected Market Hall yesterday on her phone
+  When she opens the app today
+  Then the Market Hall menu opens directly
+
+Scenario: US-019-AC3 Only sellable products are shown
+  Given Market Hall has 24 active products, of which ""Staff meal bowl"" is hidden from the customer apps and ""Halloumi Veggie Bowl"" is sold out today
+  When Clara browses the menu
+  Then she sees 23 products by category in the Administrator's order
+  And the Halloumi Veggie Bowl is labeled ""Sold out today"" with no add button
+
+Scenario: US-019-AC4 A closed branch says when it opens
+  When Clara opens Market Hall on Friday 2026-09-18 at 21:05
+  Then the menu shows ""Closed now. Opens tomorrow at 12:00."" and she can browse but not choose a pickup time","High","3","EP-04","Brasa S2","R1","ordering","API; Customer apps"
+"US-020","Story","Customize a bowl or wrap","As a customer, I want to remove ingredients I do not want and add extras, and see the price change as I go, so that I get exactly the bowl I want at a price I know before I add it.
+Persona: PER-01 Clara Mendes (CUS)
+Requirements: FR-ORD-03
+Business rules: BR-014, BR-021, BR-022, BR-023, BR-028","Scenario: US-020-AC1 Removing ingredients does not change the price
+  When Clara opens the Chicken Grill Bowl (9.40) and unticks Red onion and Coriander
+  Then the button reads ""Add 1 for EUR 9.40""
+  And the sheet says ""Removing an ingredient does not change the price.""
+
+Scenario: US-020-AC2 Add-ons add their price
+  When she also ticks Halloumi (1.50) and Garlic sauce (0.50)
+  Then the button reads ""Add 1 for EUR 11.40""
+  And the cart line shows ""Without: Red onion, Coriander"" and ""Extra: Halloumi, Garlic sauce""
+
+Scenario Outline: US-020-AC3 Quantity from 1 to 20
+  Given Clara is customizing a Chicken Wrap (7.90) with Extra chicken (2.20)
+  When she sets the quantity to <quantity>
+  Then the result is ""<result>""
+
+  Examples:
+    | quantity | result                                                                  |
+    | 1        | ""Add 1 for EUR 10.10""                                                   |
+    | 2        | ""Add 2 for EUR 20.20""                                                   |
+    | 20       | ""Add 20 for EUR 202.00""                                                 |
+    | 21       | the + button is disabled and ""You can add up to 20 of one item. For larger orders, call the branch."" is shown |
+
+Scenario: US-020-AC4 Allergens are shown before adding
+  Given the Chicken Grill Bowl shows ""Contains: milk, sesame""
+  When Clara adds Garlic sauce (eggs) to it
+  Then the allergen line reads ""Contains: eggs, milk, sesame"" before she taps Add
+
+Scenario: US-020-AC5 Closing the sheet discards the choices
+  When Clara unticks Red onion and closes the sheet with the X
+  Then nothing is added to the cart
+
+Scenario: US-020-AC6 Editing a cart line reopens the sheet with its choices
+  Given the cart holds the Chicken Grill Bowl with Halloumi and Garlic sauce, without Red onion and Coriander
+  When Clara taps the line's edit icon
+  Then the sheet opens with those choices preselected and ""Update for EUR 11.40""","High","5","EP-04","Brasa S2","R1","ordering","API; Customer apps"
+"US-021","Story","Check my cart and its total","As a customer, I want my cart to show each line, the VAT and the total exactly as my invoice will, so that there are no surprises when I pay.
+Persona: PER-01 Clara Mendes (CUS)
+Requirements: FR-ORD-04, FR-ORD-05
+Business rules: BR-023, BR-024, BR-025, BR-026, BR-027","Scenario: US-021-AC1 Canonical cart total (WE-1)
+  Given Clara's Market Hall cart holds
+    | line | item                      | add-ons                         | removed               | qty | line total |
+    | 1    | Chicken Grill Bowl        | Halloumi 1.50, Garlic sauce 0.50 | Red onion, Coriander  | 1   | 11.40      |
+    | 2    | Chicken Wrap              | Extra chicken 2.20              | Pickled chili         | 2   | 20.20      |
+    | 3    | Sparkling lemonade 0.33 l | none                            | none                  | 1   | 2.90       |
+  When she opens the cart
+  Then the bill shows VAT 10% 2.87 on net 28.73 and VAT 20% 0.48 on net 2.42
+  And the total is 34.50, with VAT 3.35 and net 31.15
+
+Scenario: US-021-AC2 VAT is rounded once per rate, not per line
+  Given the same cart
+  Then the VAT shown is 3.35, not the 3.36 that per-line rounding (1.04 + 1.84 + 0.48) would give
+  And the POS invoice for this order shows the same 3.35
+
+Scenario: US-021-AC3 Identical lines merge, different choices do not
+  Given the cart holds 2 Chicken Wraps with Extra chicken, without Pickled chili
+  When Clara adds 1 more Chicken Wrap with Extra chicken, without Pickled chili
+  Then the line shows quantity 3 and 30.30
+  When she adds 1 plain Chicken Wrap
+  Then it appears as a separate line at 7.90
+
+Scenario: US-021-AC4 Deposits are combined and follow their drinks
+  Given Clara adds 2 Still water 0.5 l (2.40 each, Bottle deposit 0.25)
+  Then the cart shows one line ""Bottle deposit 2 x 0.25 = 0.50""
+  When she tries to change the deposit quantity
+  Then the app shows ""The deposit changes with the drinks it belongs to.""
+  And when she removes one water the deposit line shows 0.25
+
+Scenario: US-021-AC5 The server ignores prices sent by the app
+  When a cart line is added through the API with ""unitPriceCents"": 1
+  Then the field is ignored and the line is priced at the catalog price
+
+Scenario: US-021-AC6 One cart per branch
+  Given Clara has the WE-1 cart at Market Hall
+  When she switches to Station Quarter
+  Then she sees her Station Quarter cart, which is empty
+  And switching back shows the Market Hall cart unchanged","High","5","EP-04","Brasa S3","R1","ordering","API; Customer apps"
+"US-022","Story","Pick a pickup time and place the order","As a customer, I want to choose a pickup minute and place my order with a clear confirmation, so that I know when to arrive, until when I can cancel, and how I will pay.
+Persona: PER-01 Clara Mendes (CUS)
+Requirements: FR-ORD-06, FR-ORD-07, FR-ORD-08
+Business rules: BR-010, BR-013, BR-027, BR-033, BR-042","Scenario: US-022-AC1 Place the canonical order
+  Given Clara has the WE-1 cart at Market Hall and the last order number today is MH-0141
+  When she chooses 12:31 and ""Pay online now"" and taps ""Place order"" at 12:05:02
+  Then order MH-0142 is created with status Queued and payment Unpaid
+  And the confirmation shows ""MH-0142, Market Hall, pickup 12:31, cancel until 12:16""
+  And a confirmation email with the same details is sent
+  And her Market Hall cart is emptied and the online checkout for 34.50 plus tip opens
+  And the Market Hall boards show MH-0142 with a sound and the message ""New order""
+
+Scenario Outline: US-022-AC2 Why no pickup times are offered
+  When Clara opens the pickup sheet with <situation>
+  Then the sheet shows ""<message>""
+
+  Examples:
+    | situation                                  | message                                                                                 |
+    | Market Hall closed on a closure date       | Market Hall is closed today.                                                            |
+    | every minute until closing unavailable     | Today's pickup times at Market Hall are fully booked.                                   |
+    | a cart of 31 kitchen units                 | Orders over 30 bowls and wraps need a call to the branch so the kitchen can plan.       |
+
+Scenario: US-022-AC3 A price change is shown before the order is placed
+  Given Clara's cart showed a total of 34.30 when the Sparkling lemonade cost 2.70
+  And the price changed to 2.90 before she tapped ""Place order""
+  Then the order is not created
+  And she sees ""The total changed to EUR 34.50 because a price was updated. Check your cart and place the order again.""
+
+Scenario Outline: US-022-AC4 Prepay-only customers pay within 8 minutes
+  Given Ana Sousa is Prepay-only and places an order at 12:00:00, which holds its kitchen minutes
+  And ""Pay at the counter"" was not offered to her
+  When her payment succeeds at <time>
+  Then the order is <result>
+
+  Examples:
+    | time     | result                                                                         |
+    | 12:07:59 | Queued and paid                                                                |
+    | (none)   | canceled at 12:08:00 with reason ""Payment not completed"" and its minutes released |
+
+Scenario: US-022-AC5 Orders stop when the branch stops taking them
+  Given Clara is on the pickup sheet at Station Quarter
+  When an Administrator records today as a closure date before she taps ""Place order""
+  Then the order is not created and she sees ""Station Quarter stopped taking orders for today.""","High","8","EP-04","Brasa S3","R1","ordering;cr","API; Customer apps"
+"US-023","Story","Follow my order live and see my history","As a customer, I want to see my order move from Queued to Ready without refreshing, and look up past orders and their invoices, so that I leave the office at the right moment and can claim expenses.
+Persona: PER-01 Clara Mendes (CUS)
+Requirements: FR-ORD-09, FR-ORD-10
+Business rules: BR-029, BR-034","Scenario: US-023-AC1 Status updates live
+  Given Clara has the order card of MH-0142 open
+  Then it shows ""Queued"" until 12:29 and ""Preparing"" from 12:29 (pickup 12:31 minus 2 kitchen minutes)
+  When Sofia marks MH-0142 Ready on the kitchen board at 12:30:40
+  Then the card shows ""Ready for pickup"" within 2 seconds without a refresh
+
+Scenario: US-023-AC2 History covers 90 days, older by date
+  Given Clara has orders on 2026-06-16, 2026-07-10 and 2026-09-18
+  When she opens her order history on 2026-09-18
+  Then she sees the 2026-07-10 and 2026-09-18 orders
+  And choosing the date 2026-06-16 in the filter shows that order
+
+Scenario: US-023-AC3 Order detail shows the full price breakdown
+  When Clara opens MH-0142 after paying
+  Then she sees each item with its removed ingredients and add-ons
+  And VAT 10% 2.87 on net 28.73, VAT 20% 0.48 on net 2.42, total 34.50, tip 1.73, paid 36.23 by card ending 4421
+  And a link to the invoice
+
+Scenario: US-023-AC4 A placed order cannot be changed by the customer
+  When Clara opens MH-0142
+  Then the detail has no edit or quantity controls
+  And PATCH /v1/orders/{orderId} with her customer token returns 403
+
+Scenario: US-023-AC5 Both apps show the same history
+  When Clara signs in to the web panel
+  Then her order history matches the mobile app, including MH-0142 and its status","High","5","EP-04","Brasa S4","R1","ordering","API; Customer apps"
+"US-024","Story","Cancel my order before the deadline","As a customer whose meeting ran over, I want to cancel my order before the kitchen starts on it and get my money back if I paid, so that I do not pay for food I cannot collect.
+Persona: PER-02 Tomasz Nowak (CUS)
+Requirements: FR-ORD-11
+Business rules: BR-017, BR-030","Scenario: US-024-AC1 Cancel an unpaid order inside the window
+  Given Tomasz's unpaid order CP-0061 at Campus is Queued for 13:10
+  When he cancels at 12:40
+  Then CP-0061 is Canceled and its kitchen minutes are released
+  And the Campus boards show ""Order canceled: CP-0061"" with a sound
+
+Scenario Outline: US-024-AC2 The deadline is inclusive
+  Given Tomasz's order CP-0057 is Queued for 12:45 and the cutoff is 15 minutes
+  When he taps Cancel at <time>
+  Then the result is ""<result>""
+
+  Examples:
+    | time     | result                                                              |
+    | 12:29:59 | canceled                                                            |
+    | 12:30:00 | canceled                                                            |
+    | 12:30:01 | ""Cancellation closed at 12:30. Call Campus if you cannot come.""    |
+
+Scenario: US-024-AC3 A paid order is refunded in full, tip included
+  Given CP-0057 was paid online: total 44.20 plus a 10% tip of 4.42, charged 48.62
+  When Tomasz cancels at 12:20
+  Then a refund of 48.62 is requested from the payment provider
+  And he receives the push ""Refund of EUR 48.62 started for CP-0057""
+  And a cancellation receipt is raised in the Campus POS account
+
+Scenario: US-024-AC4 An order already in preparation cannot be canceled
+  Given Tomasz's order CP-0070 has 24 kitchen units for 15:00, outside the rush, so it is In preparation from 14:36
+  When he taps Cancel at 14:40, before the 14:45 deadline
+  Then the result is ""Your order is already being prepared and can no longer be canceled. Call Campus if you cannot come.""
+
+Scenario: US-024-AC5 The deadline is visible until it passes
+  Given CP-0057 is Queued for 12:45
+  Then the order card shows ""Cancel until 12:30""
+  And from 12:30:01 the button is replaced by the label ""Cancellation closed""","High","3","EP-04","Brasa S4","R1","ordering","API; Customer apps"
+"US-025","Story","Reorder a past order","As a regular customer, I want to reorder my usual lunch in one tap, so that I do not rebuild the same customized bowl every time.
+Persona: PER-01 Clara Mendes (CUS)
+Requirements: FR-ORD-12
+Business rules: none","Scenario: US-025-AC1 Reorder copies lines at today's prices
+  Given the Chicken Grill Bowl now costs 9.60
+  When Clara taps ""Reorder"" on MH-0142
+  Then her Market Hall cart holds the same three lines with the same choices
+  And the bowl line is priced at 11.60
+
+Scenario: US-025-AC2 Unavailable items are flagged
+  Given the Sparkling lemonade is sold out today and the add-on Halloumi has been retired
+  When Clara reorders MH-0142
+  Then the lemonade is not added and she sees ""Sparkling lemonade 0.33 l is not available today.""
+  And the bowl is added without Halloumi and marked ""Changed: Halloumi is no longer available""
+
+Scenario: US-025-AC3 Reorder works only at the same branch
+  Given Market Hall is deactivated
+  When Clara taps ""Reorder"" on MH-0142
+  Then she sees ""Market Hall is not taking orders. Choose another branch to order from.""","Low","2","EP-04","Brasa S6","R1","ordering","API; Customer apps"
+"US-026","Story","Get told when my order is ready or canceled","As a customer, I want a notification when my order is ready, or if the branch has to cancel it, so that I can leave my desk at the right time or make other plans.
+Persona: PER-01 Clara Mendes (CUS)
+Requirements: FR-NTF-01, FR-NTF-02, FR-NTF-07
+Business rules: BR-043","Scenario: US-026-AC1 Permission is asked after the first order, not at install
+  Given Clara installed the app and has not been asked about notifications
+  When she places her first order
+  Then the confirmation screen explains ""Get a message when your order is ready"" and then shows the system permission dialog
+  And if she allows it, a push token is registered for this phone
+
+Scenario: US-026-AC2 Ready notification
+  When Sofia marks MH-0142 Ready at 12:30:40
+  Then Clara's phone receives ""MH-0142 is ready at Market Hall"" sent within 2 seconds
+
+Scenario: US-026-AC3 Canceled by the branch
+  When Marta cancels Clara's order SQ-0312 with reason ""Item unavailable""
+  Then Clara receives ""Station Quarter canceled SQ-0312: an item is unavailable. Open the app for details.""
+
+Scenario: US-026-AC4 Refund started
+  When the refund of 22.68 for SQ-0312 is accepted by the payment provider
+  Then Clara receives ""Refund of EUR 22.68 started for SQ-0312""
+
+Scenario: US-026-AC5 Tapping a notification opens the order
+  When Clara taps the Ready notification
+  Then the app opens the detail of MH-0142 and the order list is refreshed
+
+Scenario: US-026-AC6 Without push the order card still updates
+  Given Clara denied notifications
+  When MH-0142 is marked Ready
+  Then no push is sent and the order card in the open app still shows ""Ready for pickup"" within 2 seconds","High","5","EP-04","Brasa S4","R1","ordering","API; Customer apps"
+"US-027","Story","Remind customers about uncollected orders","As a branch Manager, I want customers who have not collected a ready, unpaid order to be reminded automatically, so that fewer bowls go to waste and staff do not have to phone people.
+Persona: PER-05 Marta Kowalska (MGR)
+Requirements: FR-NTF-03
+Business rules: BR-040","Scenario: US-027-AC1 The ladder starts at the pickup time when the order was ready early
+  Given Mila Horvat's unpaid order SQ-0290 for 18:40 was marked Ready at 18:35
+  Then the push goes at 18:50, the email at 18:55 and the final email with a payment link at 19:10
+
+Scenario: US-027-AC2 The ladder starts at the ready time when the kitchen was late
+  Given an unpaid order for 18:40 was marked Ready at 18:47
+  Then the push goes at 18:57, the email at 19:02 and the final email at 19:17
+
+Scenario: US-027-AC3 Payment or collection stops the ladder
+  Given SQ-0290's push went at 18:50
+  When Mila pays at the counter at 18:52, which marks the Ready order Collected
+  Then no reminder email is sent
+
+Scenario: US-027-AC4 Paid and dine-in orders are never chased
+  Given order MH-0142 was paid online and is Ready but not collected
+  And a dine-in order is Ready
+  Then no reminder is sent for either
+
+Scenario: US-027-AC5 The final email lets the customer pay
+  When the final email for SQ-0290 is sent
+  Then it contains the order number, branch, pickup time and a link that opens the online checkout for that order","High","3","EP-04","Brasa S6","R1","ordering","API; Customer apps"
+"US-028","Story","Handle no-shows at closing","As a branch Manager, I want uncollected orders closed at the end of the day, and customers who did not pay or collect to prepay next time, so that no-shows cost us less without punishing customers for our mistakes.
+Persona: PER-05 Marta Kowalska (MGR)
+Requirements: FR-NTF-04, FR-ORD-07
+Business rules: BR-041, BR-042","Scenario: US-028-AC1 The counter board lists uncollected orders at closing
+  Given Station Quarter closes at 21:00 on Wednesday 2026-09-16
+  When Marta opens the counter board at 21:00
+  Then she sees ""Not collected: 2"" with SQ-0098 (unpaid) and SQ-0301 (paid online)
+  And she can mark SQ-0301 Collected because it was handed over
+
+Scenario: US-028-AC2 An unpaid no-show sets Prepay-only for 30 days
+  Given SQ-0098 for Ana Sousa is still Ready and unpaid at 21:30
+  Then SQ-0098 becomes No-show
+  And Ana's account is Prepay-only until 2026-10-16 21:30
+  And Ana receives the email ""Your order SQ-0098 was not collected. For the next 30 days, please pay online when you order.""
+
+Scenario: US-028-AC3 A paid no-show has no account consequence
+  Given a paid order is Ready and not collected at 21:30
+  Then it becomes No-show and the customer's account is unchanged
+
+Scenario Outline: US-028-AC4 Prepay-only ends after 30 days
+  Given Ana is Prepay-only until 2026-10-16 21:30
+  When she opens the payment choice at <time>
+  Then ""Pay at the counter"" is <offered>
+
+  Examples:
+    | time             | offered     |
+    | 2026-10-16 21:29 | not offered |
+    | 2026-10-16 21:30 | offered     |
+
+Scenario: US-028-AC5 Accounts are no longer suspended automatically
+  Given an unpaid no-show occurs
+  Then the customer can still sign in and order
+  And only an Administrator can suspend an account (US-007)","High","5","EP-04","Brasa S5","R1","ordering;cr","API; Customer apps"
+"US-029","Story","Send transactional email reliably","As an Administrator, I want every email to be sent once, retried when the provider fails and logged, so that customers get their codes and reminders and I can answer ""did they get it?"".
+Persona: PER-06 Paul Lindqvist (ADM)
+Requirements: FR-NTF-05, FR-NTF-06
+Business rules: BR-044","Scenario: US-029-AC1 Emails use the customer's language
+  Given Clara's app language is English and Ana's is the national language
+  When both receive an order confirmation
+  Then each email is in the language of the account
+
+Scenario Outline: US-029-AC2 Retries 1, 5 and 15 minutes after the first attempt
+  Given the email provider rejects every attempt for the confirmation of MH-0142, first sent at 12:05:02
+  Then attempt <n> is made at <time> and the notification status afterwards is ""<status>""
+
+  Examples:
+    | n | time     | status   |
+    | 2 | 12:06:02 | Retrying |
+    | 3 | 12:10:02 | Retrying |
+    | 4 | 12:20:02 | Failed   |
+
+Scenario: US-029-AC3 One email per event, recipient and channel
+  Given the ""order placed"" event for MH-0142 is processed twice after a worker restart
+  Then Clara receives one confirmation email
+
+Scenario: US-029-AC4 A hard bounce flags the address
+  When the provider reports a hard bounce for an address
+  Then the customer record shows ""Email undeliverable"" to Administrators
+  And the next sign-in attempt with that address shows ""We could not deliver email to this address. Check it or use another.""
+
+Scenario: US-029-AC5 Administrators can see what was sent for an order
+  When Paul opens the notification log for MH-0142
+  Then he sees each notification with channel, template, status, attempts and times, without the email body","High","3","EP-04","Brasa S2","R1","ordering","API; Customer apps"
+"US-030","Story","Pay online with an optional tip","As a customer, I want to pay for my order online, with a tip if I choose, so that I can pick it up without queuing at the till.
+Persona: PER-01 Clara Mendes (CUS)
+Requirements: FR-PAY-01, FR-PAY-02, FR-PAY-03
+Business rules: BR-036, BR-038, BR-042","Scenario: US-030-AC1 Canonical online payment (WE-1)
+  Given order MH-0142 has a total of 34.50
+  When Clara opens the payment sheet
+  Then the tip options are 0%, 5%, 10% and 15% with 0% selected
+  When she selects 5%
+  Then the tip shows 1.73 (34.50 x 5% = 1.725, rounded half up) and the button reads ""Pay EUR 36.23""
+  When she completes the provider's checkout with strong customer authentication
+  And the provider's signed webhook reports success
+  Then MH-0142 shows ""Paid online"" on her phone and on the Market Hall boards within 2 seconds
+
+Scenario Outline: US-030-AC2 Tip amounts
+  Given an order total of 34.50
+  When Clara selects a tip of <tip>
+  Then the tip is <amount> and the amount to pay is <pay>
+
+  Examples:
+    | tip | amount | pay   |
+    | 0%  | 0.00   | 34.50 |
+    | 5%  | 1.73   | 36.23 |
+    | 10% | 3.45   | 37.95 |
+    | 15% | 5.18   | 39.68 |
+
+Scenario: US-030-AC3 Returning from the checkout does not mark the order paid
+  Given Clara finished the checkout but the webhook has not arrived
+  When the browser returns her to the app
+  Then the order shows ""Confirming payment"" and is not Paid
+  And when the webhook arrives the order becomes Paid within 2 seconds
+
+Scenario: US-030-AC4 A repeated webhook is processed once
+  Given the provider sends the success event for MH-0142 twice with the same event ID
+  Then the payment is recorded once and one invoice is requested
+
+Scenario: US-030-AC5 A declined payment leaves the order unpaid
+  When Clara's bank declines the payment
+  Then the attempt is Failed and MH-0142 stays Queued and unpaid
+  And she sees ""Your bank declined the payment. Try another card or pay at the counter.""","High","8","EP-05","Brasa S3","R1","payments","API; Customer apps; Till"
+"US-031","Story","Settle an order at the counter","As counter staff, I want to take cash or card for an unpaid order in one or two taps, with an optional tip on card, so that the queue keeps moving.
+Persona: PER-03 Amir Haddad (CST)
+Requirements: FR-PAY-04
+Business rules: BR-035, BR-036","Scenario: US-031-AC1 Cash needs a press and hold
+  Given app order MH-0150 is Ready and unpaid with a total of 18.60
+  When Amir presses and holds the green ""Cash 18.60"" button for 0.6 seconds
+  Then MH-0150 is Paid by cash and, because it is Ready, Collected
+  And an invoice is requested in the Market Hall POS account
+
+Scenario: US-031-AC2 A quick tap does not take cash
+  When Amir taps ""Cash 18.60"" for 0.2 seconds
+  Then nothing is settled and the button shows ""Press and hold to take cash""
+
+Scenario Outline: US-031-AC3 Card amount with tip
+  Given MH-0150 has a total of 18.60
+  When Amir taps ""Card 18.60"" and keys <entered>
+  Then the result is ""<result>""
+
+  Examples:
+    | entered | result                                                          |
+    | (none)  | ""Enter an amount, for example 20.00.""                           |
+    | 18.00   | ""The amount must be at least the order total, EUR 18.60.""       |
+    | 18.60   | charged 18.60, no tip                                           |
+    | 20.00   | charged 20.00, tip 1.40                                         |
+    | 27.90   | charged 27.90, tip 9.30                                         |
+    | 27.91   | ""That tip is more than half the order. Check the amount.""       |
+
+Scenario: US-031-AC4 No card reader, cash still works
+  Given the card reader is switched off
+  When Amir taps ""Card 18.60""
+  Then he sees ""Card reader not connected. Turn it on and tap Retry, or take cash.""
+  And the cash button remains available
+
+Scenario: US-031-AC5 An online checkout in progress blocks the counter
+  Given the customer started an online checkout for MH-0150 two minutes ago
+  When Amir taps ""Cash 18.60""
+  Then he sees ""Online payment in progress. Ask a Manager to cancel it before taking payment here.""","High","5","EP-05","Brasa S5","R1","payments;cr","API; Customer apps; Till"
+"US-032","Story","Charge a customer once, even when a step times out","As counter staff, I want the till to check a payment that timed out instead of asking me to charge again, so that no customer pays twice.
+Persona: PER-03 Amir Haddad (CST)
+Requirements: FR-PAY-05
+Business rules: BR-035","Scenario: US-032-AC1 A timed-out card payment is verified, not repeated
+  Given the card reader approved 18.60 for MH-0150 at 19:41:05 under attempt PA-77120
+  And the till's confirmation call timed out after 10 seconds
+  Then the till shows ""Checking the card payment with the provider. Do not charge the card again."" and a ""Verify payment"" button
+  And no button on the till can start a new card charge for MH-0150
+  When Amir taps ""Verify payment""
+  Then Brasa asks the provider about PA-77120, records it Succeeded and MH-0150 is Paid once
+
+Scenario: US-032-AC2 A pending attempt blocks a new one
+  Given MH-0150 has attempt PA-77120 in status Pending
+  When any till or app starts a payment for MH-0150
+  Then the API returns 409 with code PAYMENT_ATTEMPT_PENDING
+
+Scenario: US-032-AC3 A paid order cannot be paid again
+  Given MH-0142 is Paid
+  When a payment is started for MH-0142
+  Then the API returns 409 with code PAYMENT_ALREADY_SUCCEEDED
+  And the till shows MH-0142 with Deliver only
+
+Scenario: US-032-AC4 Replayed requests create one attempt
+  When the till sends POST /v1/orders/{orderId}/payment-attempts twice with the same Idempotency-Key
+  Then one attempt exists and both responses are identical
+
+Scenario: US-032-AC5 A declined attempt allows a new one
+  Given attempt PA-77121 for MH-0151 was declined by the card reader
+  When Amir taps ""Card"" again
+  Then a new attempt PA-77122 starts
+
+Scenario: US-032-AC6 A double capture pages on-call
+  Given MH-0151 is Paid and the provider reports a second successful transaction for MH-0151, charged on the reader outside the Brasa flow
+  Then on-call is paged within 5 minutes
+  And the order shows ""Two payments received"" on the counter board for a Manager to refund one","High","8","EP-05","Brasa S10","R1.1","payments;cr","API; Customer apps; Till"
+"US-033","Story","Get the invoice for a paid order","As a customer who claims lunch on expenses, I want a proper invoice for every paid order, so that I can submit it without asking the branch.
+Persona: PER-01 Clara Mendes (CUS)
+Requirements: FR-PAY-06, FR-PAY-07
+Business rules: BR-025, BR-037","Scenario: US-033-AC1 Canonical invoice (WE-1)
+  Given MH-0142 was paid online at 12:06:10 with a tip of 1.73
+  Then one invoice RE-2026-018422 is raised in the Market Hall POS account
+  And it shows VAT 10% 2.87 on net 28.73, VAT 20% 0.48 on net 2.42, total 34.50
+  And the tip 1.73 as a separate line not subject to VAT, and 36.23 paid by card
+  And Clara can open the PDF from the order in the app
+
+Scenario: US-033-AC2 The invoice is prepared asynchronously
+  Given MH-0142 has just been paid
+  Then the order shows ""Invoice being prepared"" until the POS confirms
+  And the invoice link appears within 10 seconds under normal conditions
+
+Scenario: US-033-AC3 A POS outage delays the invoice, not the payment
+  Given the POS provider is unavailable from 12:00 to 13:00
+  When MH-0142 is paid at 12:06
+  Then the payment succeeds and the order is Paid
+  And the invoice is raised once by 13:15
+
+Scenario: US-033-AC4 Unpaid orders have no invoice
+  Given MH-0150 is unpaid
+  Then the order shows no invoice link and GET /v1/orders/{orderId}/invoice returns 404 with code INVOICE_NOT_AVAILABLE
+
+Scenario: US-033-AC5 The web panel offers the same invoice
+  When Clara opens MH-0142 on the web panel
+  Then she can download the same PDF RE-2026-018422","High","5","EP-05","Brasa S4","R1","payments;cr","API; Customer apps; Till"
+"US-034","Story","Refund a canceled paid order","As a branch Manager, I want a canceled paid order to be refunded and its invoice reversed in the POS, with a record of who did what, so that customers get their money back and the books stay right.
+Persona: PER-05 Marta Kowalska (MGR)
+Requirements: FR-PAY-08, FR-PAY-09
+Business rules: BR-030, BR-031","Scenario: US-034-AC1 Canceling an online-paid order refunds it automatically
+  Given Clara's order SQ-0312 was paid online, total 21.60 plus a 5% tip of 1.08, charged 22.68, and invoiced
+  When Marta cancels it with reason ""Item unavailable""
+  Then a refund of 22.68 is requested from the provider
+  And a cancellation receipt referencing the original invoice is raised in the Station Quarter POS account
+  And the order shows Canceled, refund Pending, then Refunded when the provider confirms
+
+Scenario: US-034-AC2 Failed refunds go to a Manager queue
+  Given the provider rejects the refund for SQ-0312 three times
+  Then ""Refunds needing attention"" on the counter board lists SQ-0312 with the provider's error
+  And Marta can retry it or mark it ""Refunded outside Brasa"" with a reference
+
+Scenario: US-034-AC3 A counter-paid order is refunded at the counter and recorded
+  Given SQ-0320 was paid by cash, 14.00, and invoiced
+  When Marta cancels it with reason ""Customer request"" and records refund method ""Cash"" and reference ""Drawer 1, 14:22""
+  Then the order shows Canceled and Refunded (cash) with Marta as the actor
+  And a cancellation receipt is raised
+
+Scenario: US-034-AC4 Counter Staff cannot cancel a paid order
+  When Noor presses and holds SQ-0320 on the till
+  Then she sees ""Only a Manager can cancel a paid order. Ask your Manager.""
+
+Scenario: US-034-AC5 A refund of a customer cancellation needs no staff action
+  Given Tomasz canceled the paid order CP-0057 inside the window
+  Then the refund of 48.62 and the cancellation receipt are processed without any staff action","High","5","EP-05","Brasa S6","R1","payments","API; Customer apps; Till"
+"US-035","Story","Reconcile yesterday's payments","As the Finance Controller, I want a report each morning that matches yesterday's provider transactions, Brasa payments and POS invoices, so that a double charge or a missing invoice is found the next day, not by a customer.
+Persona: PER-07 Ines Duarte (ADM)
+Requirements: FR-PAY-10
+Business rules: BR-039","Scenario: US-035-AC1 A clean day
+  Given on 2026-09-18 the provider reported 1,284 card transactions, Brasa recorded 1,284 card payments and 2,031 paid orders all have one invoice
+  When the reconciliation runs at 03:00 on 2026-09-19
+  Then the report shows ""Matched"" for all four branches before 08:00
+
+Scenario: US-035-AC2 An unmatched provider transaction is listed
+  Given the provider reported a transaction of 23.40 at 14:22 on Till 2 at Market Hall with no Brasa payment
+  Then the report lists it as ""Provider transaction without payment"" with time, amount, card ending and device
+
+Scenario: US-035-AC3 A paid order without an invoice is listed
+  Given order RS-0207 was paid at 18:10 and has no invoice by 03:00
+  Then the report lists RS-0207 as ""Paid without invoice"" with its outbox status
+
+Scenario: US-035-AC4 Two payments for one order are listed and paged
+  Given order MH-0151 has two Succeeded payments
+  Then the report lists it as ""More than one payment""
+  And on-call was already paged by the real-time check (NFR-OBS-02)
+
+Scenario: US-035-AC5 Export for the accountants
+  When Ines exports the report for 2026-09-18
+  Then she gets a CSV with one row per transaction, payment and invoice and their match status","High","5","EP-05","Brasa S10","R1.1","payments;cr","API; Customer apps; Till"
+"US-036","Story","Take a walk-in or dine-in order on the till","As counter staff, I want to build a customized walk-in order from large tiles and settle it in the same flow, so that the counter queue moves faster than on the old POS screen.
+Persona: PER-03 Amir Haddad (CST)
+Requirements: FR-TIL-01, FR-TIL-02, FR-TIL-03, FR-TIL-04
+Business rules: BR-014, BR-019, BR-032","Scenario: US-036-AC1 Walk-in order with a customization, paid by cash
+  Given it is 12:10:30 at Market Hall and the earliest free minute for a 1-minute order is 12:11
+  When Amir taps the Chicken Wrap tile, unticks Pickled chili, ticks Feta and taps Add
+  And taps the Sparkling lemonade tile and taps Add
+  Then the pickup time 12:11 is preselected
+  When he presses and holds ""Cash 11.90""
+  Then order MH-0145 is placed, Paid by cash and Queued
+  And it appears on the kitchen board with Amir's teal tint and ""AH"" within 2 seconds
+  And the order panel clears for the next customer
+
+Scenario: US-036-AC2 Dine-in exists only on the till
+  Given the order panel is empty
+  Then the Take away / Dine in toggle is disabled
+  When Amir adds a Beef Brasa Bowl and selects Dine in
+  And places the order
+  Then the boards show the order with the label ""DINE-IN AH""
+  And when the kitchen marks it Ready it becomes Collected
+
+Scenario: US-036-AC3 Staff can choose another pickup minute
+  Given the till preselected 12:11
+  When Amir opens the pickup picker
+  Then minutes held by other orders are shown as taken and cannot be selected
+  And he can choose 12:20 for a customer who will come back later
+
+Scenario: US-036-AC4 No free minute: the till overbooks
+  Given it is 20:50:20 and no kitchen minute is free before closing at 21:00
+  When Amir adds a Chicken Grill Bowl
+  Then the picker offers 20:51, 20:52, 20:53, 20:54 and 20:55 marked ""Overbooked""
+  And the placed order shows ""Overbooked"" on the boards and in the daily summary
+
+Scenario: US-036-AC5 Place unpaid from the time field
+  When Amir taps the time field instead of a payment button
+  Then the order is placed Unpaid and appears in the live queue with payment buttons
+  And the order panel clears
+
+Scenario Outline: US-036-AC6 Quantity per line on the till
+  When Amir sets the quantity of a line to <quantity>
+  Then the result is ""<result>""
+
+  Examples:
+    | quantity | result                                  |
+    | 20       | accepted                                |
+    | 21       | the + button is disabled at 20          |","High","8","EP-06","Brasa S3","R1","till-boards","Till; Admin Panel; API"
+"US-037","Story","Work the live queue on the till","As counter staff, I want one live queue of every order at my branch where I can take payment, hand over, change or cancel an order, so that I serve customers from the app, the web and the counter in one place.
+Persona: PER-03 Amir Haddad (CST)
+Requirements: FR-TIL-05, FR-TIL-06
+Business rules: BR-029, BR-031, BR-034","Scenario: US-037-AC1 One queue for every channel
+  Given Market Hall has open orders MH-0136 (Web, unpaid), MH-0142 (App, paid online) and MH-0145 (Till, cash)
+  When Amir looks at the live queue
+  Then he sees them sorted by pickup time with channel, status and payment
+  And MH-0136 shows ""Cash"" and ""Card"" buttons and MH-0142 shows ""Deliver""
+
+Scenario: US-037-AC2 Deliver a paid order
+  Given MH-0142 is Ready and paid online
+  When Clara arrives and Amir taps ""Deliver""
+  Then MH-0142 is Collected and leaves the queue
+
+Scenario: US-037-AC3 Call up an unpaid order to change it
+  Given MH-0136 is unpaid and Queued
+  When Amir taps the MH-0136 row on Till 1
+  Then its lines load into the order panel and it disappears from Till 2's queue
+  And the boards show ""Open on Till 1 (AH)"" on MH-0136
+  When he adds a Sparkling lemonade and taps the time field
+  Then MH-0136 is saved, still unpaid, and the boards play ""Order updated""
+
+Scenario: US-037-AC4 The last line of a called-up order cannot be removed
+  Given a called-up order has one line with quantity 1
+  Then the minus button on that line is disabled with the hint ""Cancel the order instead""
+
+Scenario: US-037-AC5 A paid order cannot be called up
+  When Amir taps the MH-0142 row
+  Then nothing loads and the row shows ""Paid orders cannot be changed""
+
+Scenario: US-037-AC6 Cancel an unpaid order without deleting it
+  When Amir presses and holds MH-0136 for 0.6 seconds and confirms with reason ""Duplicate order""
+  Then MH-0136 is Canceled with reason, Amir as actor and the time
+  And it appears in the boards' closed list with the badge ""Canceled""
+  And the customer receives a push that the branch canceled the order
+
+Scenario: US-037-AC7 A lock from a crashed till expires
+  Given Till 1 called up MH-0136 and then lost power
+  When 2 minutes pass without a heartbeat from Till 1
+  Then MH-0136 returns to every queue unchanged","High","8","EP-06","Brasa S4","R1","till-boards","Till; Admin Panel; API"
+"US-038","Story","Cook from the kitchen board","As the kitchen lead, I want a board that lists every order in pickup-time order with exactly what to leave out and add, so that the line cooks the right thing at the right time without paper tickets.
+Persona: PER-04 Sofia Rinaldi (MGR)
+Requirements: FR-TIL-07
+Business rules: BR-029, BR-032","Scenario: US-038-AC1 The kitchen board shows what to make, not who ordered
+  When Sofia looks at the Market Hall kitchen board at 12:27
+  Then MH-0142 shows pickup 12:31, ""1 x Chicken Grill Bowl, Without: Red onion, Coriander, Extra: Halloumi, Garlic sauce"", ""2 x Chicken Wrap, Without: Pickled chili, Extra: Extra chicken"" and ""1 x Sparkling lemonade 0.33 l""
+  And the row shows the first name ""Clara"" and the channel ""App"", but no email, phone or payment buttons
+
+Scenario: US-038-AC2 Mark an order Ready
+  When Sofia taps ""Ready"" on MH-0142 at 12:30:40
+  Then MH-0142 moves to the Ready list on every board within 2 seconds
+  And the customer is notified (US-026)
+
+Scenario: US-038-AC3 Dine-in and prepaid till orders close on Ready
+  Given dine-in order MH-0146 and cash-paid till order MH-0145 are Preparing
+  When Sofia marks both Ready
+  Then both become Collected and leave the board after 15 minutes in the Ready list
+
+Scenario: US-038-AC4 Deposit lines are hidden from the kitchen
+  Given order MH-0147 has 2 Still water 0.5 l with a deposit line
+  Then the kitchen board shows ""2 x Still water 0.5 l"" and no deposit line
+
+Scenario: US-038-AC5 An order open on a till is marked
+  Given MH-0136 is called up on Till 1
+  Then the kitchen board shows ""Open on Till 1 (AH)"" on MH-0136 and Sofia can still mark it Ready","High","5","EP-06","Brasa S3","R1","till-boards","Till; Admin Panel; API"
+"US-039","Story","Run the counter board","As a branch Manager at the counter, I want a board with every order's customer, payment and status, with alerts I cannot miss, so that I can answer customers, handle problems and cancel when needed.
+Persona: PER-05 Marta Kowalska (MGR)
+Requirements: FR-TIL-08, FR-TIL-12
+Business rules: BR-031","Scenario: US-039-AC1 Contact and payment details on the counter board
+  When Marta views order SQ-0312 on the Station Quarter counter board
+  Then she sees the customer's name, email and phone, ""Paid online 22.68"" and the pickup time
+  And till orders show the employee's initials instead of customer details
+
+Scenario Outline: US-039-AC2 Which events make a sound
+  When <event> happens at Station Quarter
+  Then the counter board <alert>
+
+  Examples:
+    | event                                  | alert                                                   |
+    | a new order is placed                  | plays the alert sound and shows ""New order SQ-0315""     |
+    | a called-up order is saved             | plays the alert sound and shows ""Order updated SQ-0315"" |
+    | a customer cancels SQ-0315             | plays the alert sound and shows ""Order canceled SQ-0315"" |
+    | SQ-0315 is marked Ready                | refreshes silently                                      |
+
+Scenario: US-039-AC3 Missed alerts can be reviewed
+  Given 63 alerts were raised since Marta started the board at 10:45
+  When she opens the alert list
+  Then she sees the 50 most recent alerts with times and order numbers
+
+Scenario: US-039-AC4 Starting the board unlocks the sound
+  When Marta opens the counter board in a new browser
+  Then she sees a ""Start board"" button
+  And after tapping it the board goes full-screen and alert sounds play
+
+Scenario: US-039-AC5 Cancel an unpaid order with a reason
+  When Marta cancels unpaid order SQ-0316 with reason ""Customer request""
+  Then SQ-0316 is Canceled and its kitchen minutes are released","High","5","EP-06","Brasa S5","R1","till-boards","Till; Admin Panel; API"
+"US-040","Story","See who took an order and its state at a glance","As the kitchen lead, I want each order row to show who took it and whether it is late, in a way I can read from across the kitchen, so that I can ask the right person and cook the late order first.
+Persona: PER-04 Sofia Rinaldi (MGR)
+Requirements: FR-TIL-09
+Business rules: BR-007, BR-020","Scenario Outline: US-040-AC1 Tint and label
+  When an order with <source> is on the board
+  Then its tint is <tint> and its label is ""<label>""
+
+  Examples:
+    | source                                  | tint             | label        |
+    | dine-in taken by Amir                   | amber, dotted    | DINE-IN AH   |
+    | take-away taken by Amir on the till     | teal             | AH           |
+    | take-away taken on a legacy account     | neutral gray     | XX           |
+    | an app order by Clara                   | none             | App Clara    |
+
+Scenario Outline: US-040-AC2 Status badge from the server clock
+  Given walk-in order MH-0134 by Amir is for 12:19 and needs 1 kitchen minute
+  When the server time is <now> and the order is <state>
+  Then the badge is ""<badge>""
+
+  Examples:
+    | now   | state       | badge          |
+    | 12:17 | Queued      | Queued         |
+    | 12:18 | Preparing   | Preparing      |
+    | 12:19 | Preparing   | Preparing      |
+    | 12:21 | Preparing   | Late +2 min    |
+    | 12:21 | Ready       | Ready          |
+
+Scenario: US-040-AC3 A late till order keeps its tint and shows Late
+  Given MH-0134 is late at 12:21
+  Then its row is teal with ""AH"" and has the badge ""Late +2 min"" with a heavy border
+  And it is sorted first
+
+Scenario: US-040-AC4 The iPad clock does not change the badge
+  Given Till 2's clock is 4 minutes fast
+  Then MH-0134 shows the same badge on Till 2 as on the kitchen board","High","3","EP-06","Brasa S4","R1","till-boards","Till; Admin Panel; API"
+"US-041","Story","Recover the live view after a connection drop","As counter staff, I want the till to tell me when it is not live and to catch up by itself when the connection returns, so that I never work from a frozen queue again.
+Persona: PER-03 Amir Haddad (CST)
+Requirements: FR-TIL-10, FR-TIL-11
+Business rules: BR-020, BR-045","Scenario: US-041-AC1 Changes reach every screen within 2 seconds
+  When Sofia marks MH-0142 Ready on the kitchen board
+  Then Till 1, Till 2, the counter board and Clara's app show Ready within 2 seconds at p95
+
+Scenario: US-041-AC2 Reconnect loads a snapshot before showing changes
+  Given Till 1's Wi-Fi drops at 12:20:00 for 40 seconds during which MH-0151 (App) and MH-0152 (Web) are placed
+  When Till 1 reconnects at 12:20:40
+  Then it re-joins the Market Hall room and loads the branch snapshot
+  And MH-0151 and MH-0152 are in its queue by 12:20:45
+  And the indicator shows ""Reconnecting"" until the snapshot is applied, then ""Live""
+
+Scenario: US-041-AC3 A gap in the sequence triggers a snapshot
+  Given Till 2 last applied branch event 1040
+  When it receives event 1043
+  Then it loads the snapshot, whose sequence is 1043, before applying anything else
+  And its queue equals the counter board's queue
+
+Scenario: US-041-AC4 Old and duplicate events are ignored
+  Given Till 2 has applied event 1043
+  When event 1042 or 1043 arrives again
+  Then nothing changes
+
+Scenario Outline: US-041-AC5 Staleness is always visible
+  Given Till 1 last received a heartbeat at 12:21:40
+  When the time is <now>
+  Then the till shows <indicator>
+
+  Examples:
+    | now      | indicator                                                                    |
+    | 12:21:49 | ""Live""                                                                       |
+    | 12:21:50 | ""Reconnecting - last update 12:21:40"" and the queue grayed out              |
+    | 12:22:40 | a full-width banner ""Not live. Do not use this screen for new orders.""      |","High","8","EP-06","Brasa S8","R1.1","till-boards;cr","Till; Admin Panel; API"
+"US-042","Story","Review the day's operations","As a branch Manager, I want a daily summary of orders, timeliness, cancellations and no-shows by channel, so that I can see whether the kitchen kept its promises and plan staff for the next week.
+Persona: PER-05 Marta Kowalska (MGR)
+Requirements: FR-TIL-13
+Business rules: none","Scenario: US-042-AC1 Daily summary by channel
+  When Marta opens the summary for Station Quarter on 2026-09-18
+  Then she sees per channel (App, Web, Till) and in total: orders, ready on time %, late, canceled, no-shows, overbooked, gross sales and VAT
+
+Scenario Outline: US-042-AC2 Definition of ready on time
+  Given an order with pickup minute 12:31
+  When it is marked Ready at <ready>
+  Then it counts as <result>
+
+  Examples:
+    | ready    | result       |
+    | 12:30:40 | on time      |
+    | 12:31:59 | on time      |
+    | 12:32:00 | late         |
+
+Scenario: US-042-AC3 Managers see their branches only
+  When Marta opens the summary
+  Then only Station Quarter is offered
+  And Paul, as Administrator, can choose any branch or all branches
+
+Scenario: US-042-AC4 Export
+  When Marta exports the summary for 2026-09-14 to 2026-09-18
+  Then she gets a CSV with one row per branch, day and channel","Medium","3","EP-06","Brasa S6","R1","till-boards","Till; Admin Panel; API"

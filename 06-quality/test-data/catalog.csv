@@ -1,0 +1,44 @@
+id,branch,type,name,category,counts_toward_kitchen_time,price_eur,vat_takeaway_pct,vat_dine_in_pct,allergens,show_in_apps,active,deposit_product,notes
+CAT-MH-1,LOC-01,CATEGORY,Grill Bowls,,yes,,,,,yes,yes,,Counts toward kitchen time
+CAT-MH-2,LOC-01,CATEGORY,Wraps,,yes,,,,,yes,yes,,
+CAT-MH-3,LOC-01,CATEGORY,Sides,,yes,,,,,yes,yes,,Hot sides count
+CAT-MH-4,LOC-01,CATEGORY,Drinks,,no,,,,,yes,yes,,From the fridge; no kitchen time
+ING-01,ALL,INGREDIENT,Rice,,,,,,,,yes,,No price (BR-021)
+ING-02,ALL,INGREDIENT,Chicken,,,,,,,,yes,,
+ING-03,ALL,INGREDIENT,Red onion,,,,,,,,yes,,
+ING-04,ALL,INGREDIENT,Coriander,,,,,,,,yes,,
+ING-05,ALL,INGREDIENT,Tomato,,,,,,,,yes,,
+ING-06,ALL,INGREDIENT,Tzatziki,,,,,,MILK,,yes,,
+ING-07,ALL,INGREDIENT,Pickled chili,,,,,,,,yes,,
+ING-08,ALL,INGREDIENT,Lettuce,,,,,,,,yes,,
+ING-09,ALL,INGREDIENT,Tahini dressing,,,,,,SESAME,,yes,,
+ADD-01,ALL,ADD_ON,Halloumi,,,1.50,,,MILK,,yes,,VAT follows the product (BR-024)
+ADD-02,ALL,ADD_ON,Extra chicken,,,2.20,,,,,yes,,
+ADD-03,ALL,ADD_ON,Feta,,,1.10,,,MILK,,yes,,
+ADD-04,ALL,ADD_ON,Avocado,,,1.80,,,,,yes,,
+ADD-05,ALL,ADD_ON,Garlic sauce,,,0.50,,,EGGS,,yes,,
+ADD-06,ALL,ADD_ON,Chili sauce,,,0.50,,,,,yes,,
+D-01,ALL,DEPOSIT,Bottle deposit,,no,0.25,20,20,,no,yes,,One level only (BR-026); synthetic rate
+P-MH-01,LOC-01,PRODUCT,Chicken Grill Bowl,Grill Bowls,yes,9.40,10,10,SESAME,yes,yes,,Ingredients ING-01 to ING-06; add-ons ADD-01 to ADD-05
+P-MH-02,LOC-01,PRODUCT,Beef Brasa Bowl,Grill Bowls,yes,10.90,10,10,MUSTARD,yes,yes,,"Ingredients ING-01, ING-03, ING-04, ING-05; add-ons ADD-01 to ADD-05"
+P-MH-03,LOC-01,PRODUCT,Halloumi Veggie Bowl,Grill Bowls,yes,9.20,10,10,MILK,yes,yes,,
+P-MH-04,LOC-01,PRODUCT,Chicken Wrap,Wraps,yes,7.90,10,10,GLUTEN,yes,yes,,"Ingredients ING-02, ING-03, ING-07, ING-08; add-ons ADD-02, ADD-03, ADD-05, ADD-06"
+P-MH-05,LOC-01,PRODUCT,Falafel Wrap,Wraps,yes,7.60,10,10,GLUTEN,yes,yes,,"Ingredients ING-03, ING-05, ING-08, ING-09"
+P-MH-06,LOC-01,PRODUCT,Fries,Sides,yes,3.20,10,10,,yes,yes,,
+P-MH-07,LOC-01,PRODUCT,Sparkling lemonade 0.33 l,Drinks,no,2.90,20,20,,yes,yes,,
+P-MH-08,LOC-01,PRODUCT,Still water 0.5 l,Drinks,no,2.40,20,20,,yes,yes,D-01,Deposit line (US-021-AC4)
+P-MH-09,LOC-01,PRODUCT,Grilled corn,Sides,yes,3.60,10,10,,yes,yes,,Sold out in till-01 wireframe
+P-MH-10,LOC-01,PRODUCT,Side salad,Sides,yes,3.90,10,10,MUSTARD,yes,yes,,
+P-MH-11,LOC-01,PRODUCT,Iced tea,Drinks,no,2.80,20,20,,yes,yes,,
+P-MH-20,LOC-01,PRODUCT,Staff meal bowl,Grill Bowls,yes,0.00,10,10,SESAME,no,yes,,Till only (US-014-AC3)
+P-SQ-03,LOC-02,PRODUCT,Halloumi Veggie Bowl,Grill Bowls,yes,9.20,10,10,MILK,yes,yes,,Sold out at 14:10 (US-018)
+P-CP-01,LOC-04,PRODUCT,Chicken Grill Bowl,Grill Bowls,yes,8.90,10,10,SESAME,yes,yes,,Campus student price
+P-CP-05,LOC-04,PRODUCT,Falafel Wrap,Wraps,yes,7.20,10,10,GLUTEN,yes,yes,,"With Tahini dressing: gluten, sesame (US-017)"
+P-CP-07,LOC-04,PRODUCT,Sparkling lemonade 0.33 l,Drinks,no,2.40,20,20,,yes,yes,,
+P-SQ-01,LOC-02,PRODUCT,Chicken Grill Bowl,Grill Bowls,yes,9.40,10,10,,yes,yes,,Station Quarter
+P-SQ-02,LOC-02,PRODUCT,Beef Brasa Bowl,Grill Bowls,yes,10.90,10,10,,yes,yes,,Station Quarter
+P-SQ-04,LOC-02,PRODUCT,Chicken Wrap,Wraps,yes,7.90,10,10,,yes,yes,,Station Quarter
+P-SQ-05,LOC-02,PRODUCT,Falafel Wrap,Wraps,yes,7.60,10,10,,yes,yes,,Station Quarter
+P-SQ-06,LOC-02,PRODUCT,Fries,Sides,yes,3.20,10,10,,yes,yes,,Station Quarter
+P-SQ-07,LOC-02,PRODUCT,Sparkling lemonade 0.33 l,Drinks,no,2.90,20,20,,yes,yes,,Station Quarter
+P-SQ-11,LOC-02,PRODUCT,Iced tea,Drinks,no,2.80,20,20,,yes,yes,,Station Quarter

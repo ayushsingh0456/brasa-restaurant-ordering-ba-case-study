@@ -1,0 +1,469 @@
+TC ID,Title,Module,Type,Technique,Priority,Preconditions,Test Data,Steps,Expected Result,Requirement IDs,Business Rule IDs,User Story IDs,Automation,Last Result,Defect or Note
+TC-IAM-001,First sign-in with an email code creates the customer account,IAM,Functional,Use case,P1,No account for the test email; email sandbox inbox available,orders.csv: none; test email qa.new01@example.com,"1. In the mobile app enter qa.new01@example.com and tap Send code.
+2. Read the 6-digit code from the sandbox inbox.
+3. Enter the code.","1. Code screen opens; one email with a 6-digit code.
+2. Code has 6 digits.
+3. Signed in; account created with empty name and phone; code marked used; branch list opens.",FR-IAM-01,BR-001; BR-002,US-001,Automated,Pass,
+TC-IAM-002,Code validity boundary at 10 minutes,IAM,Boundary,BVA,P1,Virtual clock; code sent at 12:00:00,Test email qa.otp02@example.com,"1. Enter the code at 12:09:59.
+2. Request a new code at 12:00:00 (reset) and enter it at 12:10:00.
+3. Request a new code at 12:00:00 (reset) and enter it at 12:10:01.","1. Signed in.
+2. Signed in.
+3. ""This code has expired. Send a new code.""; not signed in.",FR-IAM-02,BR-002,US-001,Automated,Pass,
+TC-IAM-003,"Wrong entries, resend delay and hourly limit",IAM,Boundary,BVA,P1,Virtual clock; account exists,Test email qa.otp03@example.com,"1. Enter a wrong code 4 times.
+2. Enter a wrong code a 5th time, then the correct code.
+3. Request codes at 11:41:00, 11:50:00, 12:00:00, 12:01:00 and 12:10:00, then try at 12:20:00 and 12:41:00.
+4. Check the resend button at 12:00:59 and 12:01:00 after a send at 12:00:00.","1. ""You have 1 try left."" after the 4th.
+2. ""Too many wrong codes. Send a new code.""; the correct code is refused.
+3. 12:20:00 refused with ""Try again at 12:41""; 12:41:00 accepted; each new code invalidates the previous one.
+4. Disabled at 12:00:59; enabled at 12:01:00.",FR-IAM-02,BR-002,US-001,Automated,Pass,
+TC-IAM-004,Staff email gets the neutral response; suspended customer is told,IAM,Security,Equivalence partitioning,P1,Staff account Amir Haddad active; customer Tomasz suspended,users: amir.haddad@brasa.example; tomasz.nowak@example.com,"1. Enter amir.haddad@brasa.example in the customer app and tap Send code.
+2. Compare the API response body and timing with a request for an unknown email.
+3. Enter tomasz.nowak@example.com and tap Send code.","1. Same ""Check your email"" screen; no email sent; no customer account created.
+2. Identical status and body; timing difference under 50 ms.
+3. ""This account is suspended. Contact the branch or support@example.com.""; no email sent.",FR-IAM-01,BR-001,US-001,Automated,Pass,
+TC-IAM-005,Deactivated employee is signed out within 60 seconds and cannot sign in,IAM,Security,State transition,P1,Jonas Berg signed in on Till 2 and the Admin Panel is not available to him; virtual clock 14:00:00,users: jonas.berg@brasa.example,"1. At 14:00:10 Paul deactivates Jonas.
+2. Observe Till 2 until 14:01:10.
+3. Try to sign in to the till as Jonas.
+4. Call any API with Jonas's old refresh token.","2. Till 2 shows ""You have been signed out"" by 14:01:10.
+3. Sign-in refused.
+4. 401; refresh token revoked; socket disconnected.",FR-IAM-07,BR-005,US-005,Automated,Pass,
+TC-IAM-006,"Admin Panel sign-in: TOTP, lockout and password policy",IAM,Security,BVA,P1,Paul has TOTP enrolled; Marta has none; virtual clock,users: paul.lindqvist@brasa.example; marta.kowalska@brasa.example,"1. Paul signs in with password and a valid TOTP.
+2. Marta fails 4 times, then signs in at 09:00:30.
+3. Marta fails 5 times (last 09:00:00), tries correctly at 09:14:59 and 09:15:00.
+4. Paul sets passwords ""grill-bowl-7"", ""grill-bowl-77"", ""password1234"".
+5. Request a reset for Marta at 08:00:00 and use the link at 08:30:00 and again at 08:30:01; request a reset for an unknown email.","1. Signed in; sign-in audited.
+2. Signed in.
+3. 09:14:59 refused with ""Try again at 09:15""; 09:15:00 signed in.
+4. Rejected (length), accepted, rejected (breached).
+5. First use works; second use and 08:30:01 show ""This link has expired""; unknown email gets the same response.",FR-IAM-04; FR-IAM-10,BR-006,US-003,Automated,Pass,
+TC-IAM-007,Till sign-in rules and per-device drafts,IAM,Functional,Decision table,P1,Riverside deactivated; Marta assigned to LOC-02 and LOC-03; Amir assigned to LOC-01,"users: Amir, Paul, Marta","1. Amir signs in on Till 1.
+2. Paul signs in on Till 1.
+3. Marta signs in on a Station Quarter till.
+4. Amir signs in at 10:30 and taps a tile at 00:29 and 00:30.
+5. Amir signs in on Till 1 and Till 2 and builds different orders.","1. Only Market Hall offered.
+2. ""Administrator accounts cannot use the till.""
+3. Only Station Quarter offered.
+4. Dialog at 00:29; ""Your session has ended"" at 00:30 with the draft kept.
+5. Each till keeps its own draft (DEF-038 regression).",FR-IAM-05,BR-004,US-004,Automated,Pass,
+TC-IAM-008,"Role matrix, branch scope, fixed role and unique color",IAM,Security,Decision table,P1,"Marta (MGR, LOC-02), Amir (CST, LOC-01, Teal)",users: all staff; Postman: Access,"1. As Marta call GET /v1/branches/LOC-01/snapshot and join room branch:LOC-01.
+2. As Amir call GET /v1/customers.
+3. As Paul PATCH Jonas with role MGR.
+4. As Paul create an employee with color Teal.
+5. As Paul create an employee with clara.mendes@example.com.","1. 403 BRANCH_NOT_ASSIGNED; join refused.
+2. 403.
+3. 422 ROLE_IMMUTABLE.
+4. ""Teal is already used by Amir H.""
+5. ""This email already belongs to an account.""",FR-IAM-06; FR-IAM-07,BR-001; BR-003; BR-007,US-005,Automated,Pass,
+TC-IAM-009,Customer self-service and account deletion,IAM,Functional,Use case,P2,Clara signed in on phone and tablet; one test with open order MH-0142 Queued,orders.csv: MH-0142,"1. Change name to ""Clara M."" and add a mobile number.
+2. Save a name left empty; save phone ""0470 000 000"".
+3. With MH-0142 Queued, tap Delete my account.
+4. After MH-0142 is collected, delete the account; run the erasure job at +30 days.","1. Saved; counter board shows ""Clara M."" on the next order.
+2. Name and country-code messages shown.
+3. Refused: ""You have an order for 12:31 today...""
+4. Signed out everywhere; personal fields erased; orders and invoices kept without personal data.",FR-IAM-09,BR-008,US-006,Automated,Pass,
+TC-IAM-010,"Customer administration: suspend, reinstate, clear Prepay-only",IAM,Functional,State transition,P2,Tomasz signed in on web; Ana Prepay-only until 2026-10-16 21:30,"users: tomasz.nowak@example.com, ana.sousa@example.com","1. Paul searches ""mendes"".
+2. Paul suspends Tomasz with a reason.
+3. Paul reinstates Tomasz.
+4. Paul clears Ana's Prepay-only with a reason.
+5. Marta opens customers.","1. Clara listed with status; no order contents shown.
+2. Tomasz signed out within 60 s; cannot request codes; audit row.
+3. Tomasz can sign in.
+4. Ana sees Pay at the counter; SQ-0098 keeps its No-show history with the note.
+5. Menu hidden; API 403.",FR-IAM-08,BR-041,US-007,Automated,Pass,
+TC-IAM-011,Guest browsing in both apps and sign-in on add,IAM,Functional,Use case,P2,Fresh install; web browser without session,catalog.csv: Campus products,"1. Mobile: Browse without signing in; open Campus menu.
+2. Web: open Campus without signing in.
+3. As guest customize a Falafel Wrap and tap Add; sign in.
+4. Open Cart and Orders as guest.","1. Menu, prices, allergens shown.
+2. Same as mobile.
+3. Sign-in requested; after sign-in the customized wrap is in the Campus cart.
+4. ""Sign in to see your cart and orders"".",FR-IAM-03,,US-002,Automated,Pass,
+TC-BRN-001,Opening and rush hours validation,BRN,Boundary,BVA,P1,Paul signed in,branches: LOC-04 Campus,"1. Create Campus Mon-Fri 11:00-17:00 rush 11:45-13:30, Sat-Sun closed.
+2. Save Monday rush 10:30-12:00.
+3. Save rush 13:30-13:30.
+4. Save rush start only.
+5. Save open 11:00 close 11:00.","1. Saved; Campus listed; Saturday shows closed.
+2. ""Rush hours must sit inside opening hours (11:00-21:00) and end after they start."" (with Campus hours shown).
+3. Same message.
+4. ""Set both rush times or neither.""
+5. ""Closing time must be after opening time (11:00).""",FR-BRN-01; FR-BRN-02,BR-009,US-008,Automated,Pass,
+TC-BRN-002,"Closure date, deactivation guard and removal from apps",BRN,Functional,Use case,P2,Market Hall open Thursdays; Station Quarter has 4 open orders; Riverside none,"branches: LOC-01, LOC-02, LOC-03","1. Record 2026-12-24 as closure for Market Hall; open the pickup sheet with the virtual clock on that date; take a till order.
+2. Deactivate Station Quarter.
+3. Deactivate Riverside while a customer has it selected.","1. ""Market Hall is closed today""; no minutes; till order flagged Overbooked.
+2. Refused: ""Station Quarter has 4 open orders today...""
+3. Riverside gone from apps and tills within 2 s; customer asked to choose another branch.",FR-BRN-01; FR-BRN-03,BR-009; BR-019,US-008,Automated,Pass,
+TC-BRN-003,Canonical pickup-slot calculation WE-2,BRN,Functional,Decision table,P1,Virtual clock Friday 2026-09-18 12:04:20 at Market Hall; WE-2 bookings loaded,"orders.csv: MH-0131, MH-0133, MH-0134, MH-0136, MH-0138; catalog.csv: P-MH-01, P-MH-04, P-MH-07","1. Build Clara's cart: 1 Chicken Grill Bowl, 2 Chicken Wraps, 1 Sparkling lemonade.
+2. GET /v1/branches/LOC-01/pickup-slots for the cart.
+3. Inspect minutes 12:15 to 12:31.
+4. Place the order for 12:31.","1. Kitchen units 3.
+2. kitchenMinutes = 2; earliest = 12:15 by lead time.
+3. 12:15-12:27 unavailable (reason KITCHEN_FULL); 12:28 first available; 12:31 available.
+4. Order MH-0142 holds kitchen minutes 12:29 and 12:30; cancelUntil 12:16.",FR-BRN-06; FR-BRN-07,BR-010; BR-011; BR-012,US-011,Automated,Pass,
+TC-BRN-004,Kitchen minutes by units and rush window,BRN,Boundary,BVA,P1,Rush 11:45-13:30; m = 1.0; f = 0.5,catalog.csv: categories,"1. Price carts with units 0, 1, 3, 3, 7, 30 for pickups 12:30, 12:30, 13:29, 13:30, 12:23, 15:00.","1. kitchenMinutes 0, 1, 2, 3, 4, 30 respectively (13:29 in rush, 13:30 not).",FR-BRN-07; FR-MNU-01,BR-011,US-011; US-014,Automated,Pass,
+TC-BRN-005,Lead time boundary and range; Manager field rights,BRN,Boundary,BVA,P1,Nothing booked; virtual clock,branches: LOC-02,"1. Open the sheet at 12:05:00 and 12:05:01.
+2. Marta saves lead time 4, 5, 60, 61.
+3. Marta changes lead time to 20 at 12:00 and a customer opens the sheet at 12:00:30.
+4. Marta PATCHes minutes per unit.","1. Earliest 12:15 and 12:16.
+2. 4 and 61 rejected; 5 and 60 saved.
+3. Earliest 12:21.
+4. 403.",FR-BRN-04; FR-BRN-06,BR-010,US-009; US-011,Automated,Pass,
+TC-BRN-006,Concurrent placement never double-books a kitchen minute,BRN,Integration,Error guessing,P1,WE-2 bookings; 50 test customers with the same 2-minute cart,orders.csv: WE-2 bookings,"1. Fire 50 parallel POST /v1/orders for pickup 12:28.
+2. Query reservations for 12:26 and 12:27.","1. Exactly one 201; 49 responses 409 SLOT_TAKEN with a refreshed list.
+2. One reservation per kitchen minute (unique index).",FR-BRN-08,BR-012; BR-013,US-011,Automated,Pass,
+TC-BRN-007,Cancellation releases kitchen minutes to open pickers,BRN,Functional,State transition,P2,WE-2 bookings; Clara has the sheet open at 12:06,orders.csv: MH-0136,"1. Cancel MH-0136 from the counter board.
+2. Watch Clara's open sheet.","2. Within 2 s 12:21, 12:22, 12:23 and 12:24 become available.",FR-BRN-11,BR-017,US-011,Automated,Pass,
+TC-BRN-008,"Busy window blocks new orders only, with validation",BRN,Boundary,BVA,P1,Virtual clock 14:05; SQ-0230 booked 15:10; closing 21:00,orders.csv: SQ-0230,"1. Marta sets 15:00-15:30 reason Equipment.
+2. Check a 2-minute cart at 15:31 and 15:32.
+3. Save 15:30-15:00; 13:00-13:30; 20:30-21:30; 16:00-16:30 Other without note.
+4. Save 16:00-16:45 over the existing window.","1. Saved; SQ-0230 unchanged.
+2. 15:31 unavailable (15:29 blocked); 15:32 available.
+3. Messages per SRS field spec; nothing saved.
+4. Replace confirmation; 15:00-15:30 freed.",FR-BRN-09,BR-015,US-012,Automated,Pass,
+TC-BRN-009,"Delay protection blocks, caps and releases",BRN,Functional,Decision table,P1,SQ-0210 for 12:40 not Ready; 12:55 held; virtual clock 12:43:00,orders.csv: SQ-0210,"1. Read the delay block at 12:43:00.
+2. Mark SQ-0210 Ready at 12:45.
+3. Make an order 26 minutes late.
+4. Marta taps Release while an order is late.","1. Blocked 12:53, 12:54, 12:56; boards show ""Delay block: 3 min (SQ-0210 late +3)"".
+2. Released within 1 min.
+3. 20 minutes blocked.
+4. Released at once; stays released for that order; audit row.",FR-BRN-10,BR-016,US-012,Automated,Pass,
+TC-BRN-010,"POS connection, expired token and reconnect",BRN,Integration,Use case,P2,POS sandbox accounts for LOC-01 and LOC-03,"branches: LOC-01, LOC-03","1. Connect Market Hall.
+2. Expire Riverside's token; pay 6 orders.
+3. Reconnect Riverside.
+4. Marta POSTs pos-connection for LOC-02.","1. Connected; Cash and Card imported; Voucher and Bank transfer listed as not used.
+2. Orders paid; 6 invoices waiting; ""Reconnect needed""; admin email within 5 min.
+3. 6 invoices raised once each within 15 min.
+4. 403.",FR-BRN-05,,US-010,Automated,Pass,
+TC-BRN-011,"Rush throttle cap, straddle and release (CR-006)",BRN,Boundary,Decision table,P1,Virtual clock Friday 2026-10-02 12:02:00 at Station Quarter; share 60%; spec 001 bookings loaded,orders.csv: SQ-0401 to SQ-0407,"1. Open the sheet with a 2-minute cart.
+2. Check 12:41, 12:42 and 12:46.
+3. Repeat at 12:09:59 and 12:10:00 for 12:41.
+4. At 12:05:00 Noor takes a 2-minute walk-in for 12:41.","2. 12:41 and 12:42 unavailable (ONLINE_CAP); 12:46 available (9/9 and 5/9).
+3. Unavailable at 12:09:59; available at 12:10:00.
+4. Placed with kitchen minutes 12:39-12:40.",FR-BRN-12,BR-018,US-013,Automated,Pass,
+TC-BRN-012,Rush throttle settings and scope,BRN,Negative,BVA,P2,Paul and Marta signed in,branches: LOC-02,"1. Paul saves share 60%, 100%, 35%.
+2. Marta saves share 60%.
+3. Check pickups with kitchen minutes after 13:30.","1. Saved; saved with throttle off; rejected ""Enter an online share between 40% and 100%.""
+2. 403.
+3. No throttle applied.",FR-BRN-12,BR-018,US-013,Automated,Pass,
+TC-BRN-013,Online order limit and cutoff stored at placement,BRN,Boundary,BVA,P2,Limit 30 units; SQ-0150 placed for 13:00 with cutoff 15,orders.csv: SQ-0150,"1. Open the sheet with 30 and 31 kitchen units.
+2. Marta changes the cutoff to 30 at 12:35; customer cancels SQ-0150 at 12:44.","1. Minutes offered for 30; ""Orders over 30 bowls and wraps need a call to the branch..."" for 31.
+2. Canceled (deadline stays 12:45).",FR-BRN-04,BR-014,US-009,Automated,Pass,
+TC-MNU-001,"Categories, products and hidden-but-sellable items",MNU,Functional,Equivalence partitioning,P1,Paul signed in,"catalog.csv: P-MH-01, P-MH-07, P-MH-20","1. Price a cart of 1 Chicken Grill Bowl and 2 Sparkling lemonades.
+2. Create Chicken Grill Bowl at 9.40 with ingredients and add-ons.
+3. Create Staff meal bowl with Show in customer apps off.","1. 1 kitchen unit.
+2. Shown in apps and till in display order; VAT 10% takeaway and dine-in stored.
+3. Not in apps; tile on the Market Hall till.",FR-MNU-01; FR-MNU-02,BR-011; BR-024,US-014,Automated,Pass,
+TC-MNU-002,Price validation and deposit rules,MNU,Boundary,BVA,P2,Paul signed in,"catalog.csv: P-MH-08, D-01","1. Save prices -0.10, 0.00, 9.40, 200.01.
+2. Set Still water deposit to Bottle deposit; set Bottle deposit as its own deposit; give Bottle deposit a Crate deposit.","1. -0.10 and 200.01 rejected; 0.00 and 9.40 saved.
+2. Saved; ""A product cannot be its own deposit.""; ""A deposit product cannot carry another deposit.""",FR-MNU-02; FR-MNU-05,BR-026,US-014,Automated,Pass,
+TC-MNU-003,"Ingredients, add-ons, unique names and retiring an add-on",MNU,Functional,Use case,P2,Clara's cart has a bowl with Halloumi and Garlic sauce,"catalog.csv: ING-06, ADD-01, ADD-05","1. Create ingredient Tzatziki (Milk).
+2. Create add-on Halloumi 1.50 (Milk).
+3. Create add-ons ""Chili sauce"", ""garlic sauce"".
+4. Deactivate Halloumi; Clara opens her cart.","1. No price field.
+2. Saved and attachable.
+3. First saved; second rejected as duplicate (DEF-027 regression).
+4. Line shows ""Halloumi is no longer available and was removed. Price updated to 9.90.""",FR-MNU-03; FR-MNU-04,BR-021; BR-022,US-015,Automated,Pass,
+TC-MNU-004,POS article sync within 5 minutes,MNU,Integration,Use case,P1,Market Hall connected to the POS sandbox,catalog.csv: P-MH-02,"1. Create Beef Brasa Bowl 10.90.
+2. Change its price to 11.20.
+3. Deactivate it.
+4. Save a product with dine-in VAT 13% (not set up in the POS).","1. Article created and linked within 5 min.
+2. Price pushed within 5 min.
+3. Article deactivated within 5 min.
+4. ""POS sync failed"" shown; admin alert; product sellable; invoices wait in the outbox.",FR-MNU-06,,US-016,Automated,Pass,
+TC-MNU-005,Allergens before purchase (CR-001),MNU,Functional,Decision table,P1,Campus menu loaded,"catalog.csv: P-CP-05, ING-09, ADD-03","1. View Falafel Wrap card and detail in both apps.
+2. Remove Tahini dressing and add Feta.
+3. Activate a product with unconfirmed allergens.","1. Icons with labels; ""Contains: gluten, sesame""; same on web.
+2. ""Contains: gluten, milk, sesame"" and the removal note.
+3. Refused: ""Confirm the allergens for this product...""",FR-MNU-07,BR-028,US-017,Automated,Pass,
+TC-MNU-006,Sold out today in every channel,MNU,Functional,State transition,P2,SQ-0188 placed 13:50 with a Halloumi Veggie Bowl; a customer cart has one,orders.csv: SQ-0188; catalog.csv: P-SQ-03,"1. Marta marks Halloumi Veggie Bowl sold out at 14:10.
+2. Customer places the cart.
+3. Check SQ-0188.
+4. Noor tries to mark a product sold out.","1. Apps show ""Sold out today"" within 2 s; till tile dimmed.
+2. Refused: ""Halloumi Veggie Bowl is sold out today. Remove it to continue.""
+3. Unchanged.
+4. No option; API 403.",FR-MNU-08,,US-018,Automated,Pass,
+TC-MNU-007,"Sold-out reset at local midnight, including the DST change",MNU,Boundary,BVA,P2,Virtual clock,catalog.csv: P-SQ-03,"1. Mark sold out on 2026-09-18; view at 23:59 and 2026-09-19 00:00.
+2. Mark sold out on 2026-10-24; view at 2026-10-24 23:59 and 2026-10-25 00:00 (DST ends that night).","1. Sold out at 23:59; available at 00:00.
+2. Same as step 1.",FR-MNU-08,,US-018,Automated,Fail,DEF-071 (sold-out reset runs at 23:00 on the night summer time ends; fix planned for R1.3)
+TC-ORD-001,"Branch list, hours and remembered branch",ORD,Functional,Use case,P2,Virtual clock Saturday 2026-09-19 12:10,branches: all,"1. Open the branch list.
+2. Select Market Hall; restart the app the next day.","1. Display order Market Hall, Station Quarter, Riverside, Campus; Market Hall ""Open today 12:00-21:00""; Campus ""Closed today"".
+2. Market Hall menu opens directly.",FR-ORD-01,,US-019,Automated,Pass,
+TC-ORD-002,Menu shows only sellable products,ORD,Functional,Equivalence partitioning,P2,"24 active products at Market Hall, one hidden from apps, one sold out",catalog.csv: Market Hall products,"1. Browse the menu.
+2. Open Market Hall at Friday 21:05.","1. 23 products in display order; sold-out item labeled with no add button.
+2. ""Closed now. Opens tomorrow at 12:00.""",FR-ORD-02,,US-019,Automated,Pass,
+TC-ORD-003,"Customization: removals, add-ons, running total and quantity",ORD,Boundary,BVA,P1,Market Hall menu,"catalog.csv: P-MH-01, P-MH-04, ADD-01, ADD-02, ADD-05","1. Chicken Grill Bowl: untick Red onion and Coriander.
+2. Tick Halloumi and Garlic sauce.
+3. Chicken Wrap with Extra chicken: quantity 1, 2, 20, 21.
+4. Close the sheet with X.","1. ""Add 1 for EUR 9.40"" and the no-credit note.
+2. ""Add 1 for EUR 11.40""; allergens read ""Contains: eggs, milk, sesame"".
+3. 10.10, 20.20, 202.00; + disabled at 20 with the message.
+4. Nothing added.",FR-ORD-03,BR-014; BR-021; BR-022; BR-023,US-020,Automated,Pass,
+TC-ORD-004,"Cart merge, deposit line and one cart per branch",ORD,Functional,Equivalence partitioning,P2,Clara signed in,"catalog.csv: P-MH-04, P-MH-08, D-01","1. Add 2 then 1 Chicken Wrap with Extra chicken without Pickled chili; add a plain Chicken Wrap.
+2. Add 2 Still water; try to edit the deposit; remove one water.
+3. Switch to Station Quarter and back.","1. One line qty 3 at 30.30; plain wrap separate at 7.90.
+2. ""Bottle deposit 2 x 0.25 = 0.50""; edit refused with message; deposit 0.25.
+3. Separate carts; Market Hall cart unchanged.",FR-ORD-04,BR-026,US-021,Automated,Pass,
+TC-ORD-005,Canonical order total WE-1: VAT per rate group,ORD,Functional,Decision table,P1,"Synthetic VAT: food 10%, drinks 20%","orders.csv: MH-0142; catalog.csv: P-MH-01, P-MH-04, P-MH-07, ADD-01, ADD-02, ADD-05","1. Build the WE-1 cart.
+2. GET /v1/carts/LOC-01.
+3. Compare with per-line rounding.","1. Lines 11.40, 20.20, 2.90.
+2. VAT 10% 2.87 on net 28.73; VAT 20% 0.48 on net 2.42; total 34.50; VAT 3.35; net 31.15.
+3. Per-line would be 3.36; API returns 3.35 (DEF-031 regression).",FR-ORD-05,BR-023; BR-024; BR-025,US-021,Automated,Pass,
+TC-ORD-006,Server-side pricing and price change at placement,ORD,Security,Error guessing,P1,Lemonade price 2.70 when the cart was shown,catalog.csv: P-MH-07,"1. POST a cart line with ""unitPriceCents"": 1.
+2. Change the lemonade price to 2.90; place the order with the old total 34.30.
+3. Place again.","1. Ignored; catalog price used.
+2. 409 PRICE_CHANGED: ""The total changed to EUR 34.50 because a price was updated...""
+3. Placed at 34.50.",FR-ORD-05; FR-ORD-07,BR-027,US-021; US-022,Automated,Pass,
+TC-ORD-007,Place the canonical order MH-0142,ORD,Functional,Use case,P1,Virtual clock 12:05:02; last order today MH-0141; email sandbox,orders.csv: MH-0142,"1. Choose 12:31 and Pay online now; tap Place order.
+2. Check the email sandbox, cart and Market Hall boards.","1. MH-0142 Queued, Unpaid; confirmation ""MH-0142, Market Hall, pickup 12:31, cancel until 12:16""; checkout opens.
+2. One confirmation email; cart empty; boards show MH-0142 with sound and ""New order"".",FR-ORD-07; FR-ORD-08,BR-013; BR-033,US-022,Automated,Pass,
+TC-ORD-008,Why no pickup times are offered,ORD,Negative,Equivalence partitioning,P2,Closure date at Market Hall; fully booked day; 31-unit cart,"branches: LOC-01, LOC-02","1. Open the sheet on the closure date.
+2. Open the sheet on a fully booked day.
+3. Open the sheet with 31 units.
+4. Record a closure date while a customer is on the sheet at Station Quarter; place.","1-3. The three messages from SRS 3.2.4.
+4. Not created: ""Station Quarter stopped taking orders for today.""",FR-ORD-06; FR-ORD-07,BR-010; BR-014,US-022,Automated,Pass,
+TC-ORD-009,Prepay-only: online only and 8-minute hold,ORD,Boundary,State transition,P1,Ana Prepay-only; virtual clock 12:00:00,users: ana.sousa@example.com,"1. Open the payment choice.
+2. Place; complete payment at 12:07:59.
+3. Place again; do not pay; advance to 12:08:00.","1. Only Pay online now, with the Prepay-only message.
+2. Pending payment then Queued and paid.
+3. Canceled at 12:08:00 with ""Payment not completed""; kitchen minutes released.",FR-ORD-07,BR-042,US-022; US-028,Automated,Pass,
+TC-ORD-010,"Live status, history and detail",ORD,Functional,State transition,P1,"MH-0142 placed and paid; orders on 2026-06-16, 2026-07-10, 2026-09-18",orders.csv: MH-0142,"1. Keep the order card open from 12:28 to 12:31; Sofia marks Ready at 12:30:40.
+2. Open history on 2026-09-18; filter 2026-06-16.
+3. Open MH-0142 detail.
+4. PATCH the order with the customer token.
+5. Compare with the web panel.","1. Queued, Preparing at 12:29, Ready within 2 s of 12:30:40.
+2. 07-10 and 09-18 listed; filter shows 06-16.
+3. Items, VAT lines, total 34.50, tip 1.73, paid 36.23, card 4421, invoice link.
+4. 403.
+5. Same history.",FR-ORD-09; FR-ORD-10,BR-029; BR-034,US-023,Automated,Pass,
+TC-ORD-011,Customer cancellation boundary and refund,ORD,Boundary,BVA,P1,"CP-0057 Queued for 12:45, cutoff 15; CP-0070 24 units for 15:00","orders.csv: CP-0057, CP-0061, CP-0070","1. Cancel CP-0057 at 12:29:59, 12:30:00, 12:30:01 (reset between).
+2. With CP-0057 paid 48.62, cancel at 12:20.
+3. Cancel CP-0070 at 14:40.
+4. Cancel unpaid CP-0061 for 13:10 at 12:40.","1. Canceled; canceled; ""Cancellation closed at 12:30..."" (DEF-022 regression).
+2. Refund 48.62 requested; push; cancellation receipt.
+3. ""Your order is already being prepared...""
+4. Canceled; minutes released; board alert with sound.",FR-ORD-11,BR-017; BR-030,US-024,Automated,Pass,
+TC-ORD-012,Reorder at current prices,ORD,Functional,Use case,P3,Bowl price now 9.60; lemonade sold out; Halloumi retired in a second run,orders.csv: MH-0142,"1. Reorder MH-0142.
+2. Reorder with lemonade sold out and Halloumi retired.
+3. Reorder with Market Hall deactivated.","1. Three lines; bowl 11.60.
+2. Lemonade skipped with message; bowl added without Halloumi, marked Changed.
+3. ""Market Hall is not taking orders...""",FR-ORD-12,,US-025,Manual,Pass,
+TC-NTF-001,Push permission after first order and per-device tokens,NTF,Functional,Use case,P1,Fresh install; Clara on phone and tablet,users: clara.mendes@example.com,"1. Place a first order; allow notifications.
+2. Sign out on the tablet; mark MH-0142 Ready.","1. Explanation then system dialog; token stored for this device.
+2. Push only to the phone; tablet token removed.",FR-NTF-01; FR-IAM-09,BR-043,US-026; US-006,Automated,Pass,
+TC-NTF-002,"Ready, canceled and refund pushes with privacy-safe text",NTF,Functional,Equivalence partitioning,P1,Push sandbox; Clara has a token,"orders.csv: MH-0142, SQ-0312","1. Sofia marks MH-0142 Ready at 12:30:40.
+2. Marta cancels SQ-0312 ""Item unavailable"".
+3. Refund 22.68 accepted.
+4. Tap a notification.
+5. Deny notifications and mark another order Ready.","1. ""MH-0142 is ready at Market Hall"" within 2 s.
+2. Cancel text with reason; no items listed.
+3. ""Refund of EUR 22.68 started for SQ-0312"".
+4. Order detail opens; list refreshed.
+5. No push; order card updates within 2 s.",FR-NTF-02; FR-NTF-07,,US-026,Automated,Pass,
+TC-NTF-003,Reminder ladder timings and anchor,NTF,Boundary,Decision table,P1,Virtual clock; unpaid pickup orders,orders.csv: SQ-0290,"1. SQ-0290 for 18:40 Ready at 18:35; advance the clock.
+2. Order for 18:40 Ready at 18:47; advance the clock.","1. Push 18:50, email 18:55, final email 19:10.
+2. Push 18:57, email 19:02, final email 19:17.",FR-NTF-03,BR-040,US-027,Automated,Pass,
+TC-NTF-004,Ladder stops; paid and dine-in orders never chased,NTF,Functional,Decision table,P2,Virtual clock,"orders.csv: SQ-0290, MH-0142, MH-0146","1. Pay SQ-0290 at the counter at 18:52.
+2. Leave MH-0142 (paid) and dine-in MH-0146 Ready.
+3. Let another unpaid order reach the final email.","1. No email at 18:55.
+2. No reminders.
+3. Final email contains order number, branch, pickup time and a working payment link.",FR-NTF-03,BR-040; BR-032,US-027,Automated,Pass,
+TC-NTF-005,No-show cutoff at closing plus 30 minutes (CR-003),NTF,Functional,State transition,P1,Station Quarter closes 21:00 on 2026-09-16; SQ-0098 unpaid Ready; SQ-0301 paid Ready,"orders.csv: SQ-0098, SQ-0301","1. Open the counter board at 21:00.
+2. Mark SQ-0301 Collected.
+3. Advance to 21:30.","1. ""Not collected: 2"" listed.
+2. SQ-0301 Collected.
+3. SQ-0098 No-show; Ana Prepay-only until 2026-10-16 21:30; no-show email; account not suspended.",FR-NTF-04,BR-041,US-028,Automated,Pass,
+TC-NTF-006,Prepay-only end boundary and early clear,NTF,Boundary,BVA,P2,Ana Prepay-only until 2026-10-16 21:30,users: ana.sousa@example.com,"1. Open the payment choice at 2026-10-16 21:29 and 21:30.
+2. Paid no-show for another customer at cutoff.","1. Pay at the counter hidden at 21:29; offered at 21:30.
+2. No-show; account unchanged.",FR-NTF-04; FR-IAM-08,BR-041; BR-042,US-028; US-007,Automated,Pass,
+TC-NTF-007,"Email retries, deduplication, language, bounces and log",NTF,Integration,Error guessing,P1,Email provider sandbox set to reject; virtual clock,orders.csv: MH-0142,"1. Send the MH-0142 confirmation with the provider rejecting at 12:05:02.
+2. Process the order-placed event twice.
+3. Send confirmations for an English and a national-language account.
+4. Simulate a hard bounce.
+5. Open the notification log.","1. Attempts at 12:06:02, 12:10:02, 12:20:02; then Failed.
+2. One email.
+3. Each in its account language.
+4. ""Email undeliverable"" flag; sign-in message.
+5. Entries with channel, status, attempts; no body.",FR-NTF-05; FR-NTF-06,BR-044,US-029,Automated,Pass,
+TC-PAY-001,Canonical online payment with a 5% tip,PAY,Functional,Use case,P1,MH-0142 Queued and unpaid; provider sandbox,orders.csv: MH-0142,"1. Open the payment sheet.
+2. Select 5%.
+3. Complete checkout with test card 4421 and SCA.
+4. Provider sends the signed webhook.","1. 0% selected; options 0, 5, 10, 15%.
+2. Tip 1.73; ""Pay EUR 36.23"".
+3. Checkout amount 36.23.
+4. Paid online on app and boards within 2 s.",FR-PAY-01; FR-PAY-02; FR-PAY-03,BR-036; BR-038,US-030,Automated,Pass,
+TC-PAY-002,Tip amounts and half-up rounding,PAY,Boundary,Decision table,P1,Order total 34.50,orders.csv: MH-0142,"1. Select 0%, 5%, 10%, 15%.","1. Tips 0.00, 1.73, 3.45, 5.18; amounts 34.50, 36.23, 37.95, 39.68.",FR-PAY-02,BR-036,US-030,Automated,Pass,
+TC-PAY-003,Only the signed webhook marks an order paid,PAY,Security,Error guessing,P1,Checkout completed in sandbox; webhook held,orders.csv: MH-0142,"1. Return to the app before the webhook.
+2. POST a forged ""paid"" status from the app.
+3. Send a webhook with an invalid signature.
+4. Release the real webhook.","1. ""Confirming payment""; not paid.
+2. Ignored (403).
+3. 401; no change.
+4. Paid within 2 s.",FR-PAY-03,BR-038,US-030,Automated,Pass,
+TC-PAY-004,Repeated webhook processed once,PAY,Integration,Error guessing,P1,Provider sandbox,orders.csv: MH-0142,1. Deliver the same success event twice with the same event ID.,"1. One payment, one invoice request; second delivery acknowledged with 200 and no change.",FR-PAY-03,BR-035; BR-038,US-030,Automated,Pass,
+TC-PAY-005,Cash settlement needs a press and hold,PAY,Functional,BVA,P1,"MH-0150 App, Ready, unpaid, 18.60",orders.csv: MH-0150,"1. Tap Cash for 0.2 s.
+2. Press and hold for 0.6 s.","1. Nothing settled; ""Press and hold to take cash"".
+2. Paid by cash, Collected; invoice requested.",FR-PAY-04,,US-031,Automated,Pass,
+TC-PAY-006,Counter card amount and tip limits,PAY,Boundary,BVA,P1,MH-0150 total 18.60; card reader sandbox,orders.csv: MH-0150,"1. Key nothing, 18.00, 18.60, 20.00, 27.90, 27.91 (reset between).
+2. Switch the reader off and tap Card.
+3. Start an online checkout, then tap Cash.","1. Messages for empty and 18.00; charges 18.60 (no tip), 20.00 (tip 1.40), 27.90 (tip 9.30); 27.91 refused (DEF-044).
+2. ""Card reader not connected...""; cash available.
+3. ""Online payment in progress...""",FR-PAY-04,BR-036,US-031,Automated,Pass,
+TC-PAY-007,"Timed-out card confirmation is verified, never re-charged (CR-007)",PAY,Integration,Error guessing,P1,Reader approves; confirmation endpoint delayed 12 s by fault injection,orders.csv: MH-0150; attempt PA-77120,"1. Take card 18.60.
+2. Inspect till controls after the 10 s timeout.
+3. Tap Verify payment.
+4. Check provider transactions.","2. ""Checking the card payment..."" and Verify payment only; no charge button.
+3. Attempt Succeeded; order Paid.
+4. Exactly one transaction (INC-2026-009 regression).",FR-PAY-05,BR-035,US-032,Automated,Pass,
+TC-PAY-008,Payment attempt rules (table 3.6),PAY,Negative,Decision table,P1,Orders with attempts in each state,"orders.csv: MH-0142, MH-0150, MH-0151; Postman: Payments","1. Start an attempt on an order with a Pending attempt.
+2. Start an attempt on paid MH-0142.
+3. POST payment-attempts twice with one Idempotency-Key.
+4. Start a new attempt after a decline.
+5. Start online twice within 15 min.","1. 409 PAYMENT_ATTEMPT_PENDING.
+2. 409 PAYMENT_ALREADY_SUCCEEDED.
+3. One attempt; identical responses.
+4. New attempt PA-77122.
+5. Same checkout URL returned.",FR-PAY-04; FR-PAY-05,BR-035,US-031; US-032,Automated,Pass,
+TC-PAY-009,Canonical invoice and asynchronous invoicing,PAY,Integration,Use case,P1,MH-0142 paid 12:06:10 with tip 1.73; POS sandbox,orders.csv: MH-0142,"1. Watch the order after payment.
+2. Open the invoice PDF in both apps.
+3. Make the POS unavailable 12:00-13:00 and pay a second order.
+4. Request the invoice of unpaid MH-0150.","1. ""Invoice being prepared"", then RE-2026-018422 within 10 s.
+2. VAT 10% 2.87/net 28.73, VAT 20% 0.48/net 2.42, total 34.50, tip 1.73 separate, paid 36.23; same PDF on web.
+3. Paid at once; invoice raised once by 13:15.
+4. 404 INVOICE_NOT_AVAILABLE.",FR-PAY-06; FR-PAY-07,BR-025; BR-037,US-033,Automated,Pass,
+TC-PAY-010,Refunds and cancellation receipts,PAY,Functional,Decision table,P1,SQ-0312 paid online 22.68 and invoiced; SQ-0320 paid cash 14.00,"orders.csv: SQ-0312, SQ-0320, CP-0057","1. Marta cancels SQ-0312.
+2. Make the provider reject the refund 3 times.
+3. Marta cancels SQ-0320 and records Cash refund.
+4. Noor tries to cancel SQ-0320.
+5. Tomasz cancels paid CP-0057 in the window.","1. Refund 22.68 requested; cancellation receipt; Refunded on confirmation.
+2. Listed in Refunds needing attention; retry or mark refunded outside Brasa.
+3. Canceled; Refunded (cash) with actor; receipt.
+4. ""Only a Manager can cancel a paid order.""
+5. Refund 48.62 and receipt with no staff action.",FR-PAY-08; FR-PAY-09,BR-030; BR-031,US-034,Automated,Blocked,Blocked: the provider sandbox cannot simulate refund rejection since its 2026-09-15 update; step 2 covered by the contract test
+TC-PAY-011,Nightly reconciliation,PAY,Integration,Use case,P1,Provider settlement sandbox with seeded mismatches for 2026-09-18,"orders.csv: RS-0207, MH-0151","1. Run reconciliation at 03:00 for a clean day.
+2. Seed a provider transaction 23.40 without a payment; RS-0207 without invoice; MH-0151 with two payments; rerun.
+3. Export CSV.","1. ""Matched"" for all branches before 08:00.
+2. Three rows listed with their categories; double payment also paged.
+3. One row per transaction, payment and invoice with status.",FR-PAY-10,BR-039,US-035,Automated,Pass,
+TC-PAY-012,Declined online payment leaves the order unpaid,PAY,Negative,Equivalence partitioning,P2,Provider decline test card,orders.csv: MH-0142 (reset),1. Pay with the decline test card.,"1. Attempt Failed; order Queued and unpaid; ""Your bank declined the payment. Try another card or pay at the counter.""",FR-PAY-01,BR-038,US-030,Automated,Pass,
+TC-TIL-001,Walk-in order with a customization paid by cash,TIL,Functional,Use case,P1,Virtual clock 12:10:30 at Market Hall; earliest 1-minute slot 12:11,"catalog.csv: P-MH-04, P-MH-07, ADD-03","1. Tap Chicken Wrap; untick Pickled chili; tick Feta; Add.
+2. Tap Sparkling lemonade; Add.
+3. Press and hold Cash 11.90.","1-2. 12:11 preselected; total 11.90.
+3. MH-0145 Paid by cash, Queued; teal ""AH"" on the kitchen board within 2 s; panel clears.",FR-TIL-01; FR-TIL-02; FR-TIL-03; FR-TIL-04,BR-019,US-036,Automated,Pass,
+TC-TIL-002,Dine-in exists only on the till and closes on Ready,TIL,Functional,State transition,P1,Till and apps available,catalog.csv: P-MH-02,"1. Check the toggle with an empty order.
+2. Add a Beef Brasa Bowl, choose Dine in, place.
+3. Kitchen marks it Ready.
+4. Inspect the customer API for an order type field.","1. Disabled.
+2. Boards show ""DINE-IN AH"".
+3. Collected.
+4. The customer API rejects orderType DINE_IN with 422.",FR-TIL-02; FR-TIL-07,BR-032,US-036; US-038,Automated,Pass,
+TC-TIL-003,Overbooked minutes when the kitchen is full,TIL,Boundary,BVA,P2,Virtual clock 20:50:20; no free kitchen minute before 21:00,orders.csv: synthetic full evening,"1. Add a Chicken Grill Bowl and open the picker.
+2. Place and open the daily summary.","1. 20:51-20:55 marked Overbooked.
+2. Order flagged Overbooked on boards and counted in the summary.",FR-TIL-03,BR-019,US-036,Automated,Pass,
+TC-TIL-004,"Place unpaid, per-device drafts and line quantity",TIL,Functional,Equivalence partitioning,P2,"Two tills, same account",catalog.csv: P-MH-01,"1. Tap the time field instead of a payment button.
+2. Build different orders on Till 1 and Till 2.
+3. Set a line to 20 then try 21.","1. Order Unpaid in the queue with payment buttons; panel clears.
+2. Independent drafts.
+3. 20 accepted; + disabled.",FR-TIL-04; FR-TIL-02,BR-014,US-036,Automated,Pass,
+TC-TIL-005,Live queue across channels and Deliver,TIL,Functional,Use case,P1,MH-0136 Web unpaid; MH-0142 App paid Ready; MH-0145 Till cash,"orders.csv: MH-0136, MH-0142, MH-0145","1. View the queue.
+2. Tap Deliver on MH-0142.","1. Sorted by pickup with channel, status, payment; MH-0136 Cash/Card; MH-0142 Deliver.
+2. MH-0142 Collected and removed.",FR-TIL-05,BR-029,US-037,Automated,Pass,
+TC-TIL-006,"Call-up lock, edit and release",TIL,Functional,State transition,P1,MH-0136 unpaid; Till 1 and Till 2 online,orders.csv: MH-0136,"1. Call up MH-0136 on Till 1.
+2. Add a lemonade; tap the time field.
+3. Call up an order with one line; try minus.
+4. Tap paid MH-0142.
+5. Call up MH-0136, power off Till 1, wait 2 min.","1. Loaded; hidden on Till 2; boards ""Open on Till 1 (AH)"".
+2. Saved unpaid; ""Order updated"" with sound.
+3. Minus disabled with hint.
+4. ""Paid orders cannot be changed"".
+5. MH-0136 back in every queue unchanged.",FR-TIL-05,BR-034,US-037,Automated,Pass,
+TC-TIL-007,Cancel from the till keeps the order,TIL,Functional,Decision table,P1,MH-0136 unpaid; SQ-0320 paid,"orders.csv: MH-0136, SQ-0320","1. Amir press-holds MH-0136 0.6 s, reason Duplicate order.
+2. Noor press-holds paid SQ-0320.
+3. Query MH-0136 in the database.","1. Canceled with reason, actor, time; closed list; customer push.
+2. ""Only a Manager can cancel a paid order.""
+3. Record exists with status CANCELED (never deleted).",FR-TIL-06,BR-031,US-037,Automated,Pass,
+TC-TIL-008,Kitchen board content and Mark Ready,TIL,Functional,Use case,P1,WE-2 orders and MH-0147 with water deposit,"orders.csv: MH-0142, MH-0147","1. View MH-0142 at 12:27.
+2. Mark Ready at 12:30:40.
+3. View MH-0147.","1. Lines with Without/Extra; first name and channel only; no contact or payment buttons.
+2. Ready list on every board within 2 s.
+3. ""2 x Still water 0.5 l"" and no deposit line.",FR-TIL-07,BR-029,US-038,Automated,Pass,
+TC-TIL-009,"Counter board details, cancel and uncollected list",TIL,Functional,Use case,P2,SQ-0312 paid online; SQ-0316 unpaid; closing 21:00,"orders.csv: SQ-0312, SQ-0316","1. View SQ-0312.
+2. Cancel SQ-0316 reason Customer request.
+3. Open the board at 21:00.","1. Name, email, phone, ""Paid online 22.68"".
+2. Canceled; minutes released.
+3. ""Not collected"" list shown.",FR-TIL-08; FR-NTF-04,BR-031,US-039; US-028,Automated,Pass,
+TC-TIL-010,Board tints and status badges,TIL,Functional,Decision table,P1,"MH-0134 by Amir for 12:19, P = 1; virtual clock","orders.csv: MH-0134, MH-0142, MH-0146","1. View tints for dine-in, till, legacy and app orders.
+2. View MH-0134 at 12:17, 12:18, 12:19, 12:21 and after Ready.
+3. Set Till 2 clock 4 min fast.","1. Amber dotted ""DINE-IN AH""; teal ""AH""; gray ""XX""; none ""App Clara"".
+2. Queued; Preparing; Preparing; teal with ""Late +2 min"", heavy border, first; Ready.
+3. Same badges on Till 2.",FR-TIL-09,BR-007; BR-020,US-040,Automated,Pass,
+TC-TIL-011,Reconnect loads a snapshot before showing changes (CR-004),TIL,Integration,State transition,P1,Till 1 on Wi-Fi; network shaping tool,"orders.csv: MH-0151, MH-0152","1. At 12:20:00 drop Till 1 Wi-Fi for 40 s; place MH-0151 (App) and MH-0152 (Web) meanwhile.
+2. Restore at 12:20:40.",2. Re-joins room; loads snapshot; both orders in queue by 12:20:45; Reconnecting then Live (INC-2026-004 regression).,FR-TIL-10; FR-TIL-11,BR-045,US-041,Automated,Pass,
+TC-TIL-012,"Sequence gaps, duplicates and staleness indicator",TIL,Boundary,BVA,P1,Test harness injects socket events; virtual clock,Postman: Realtime harness,"1. Till at seq 1040 receives 1043.
+2. Send 1042 and 1043 again.
+3. Stop heartbeats at 12:21:40; observe at 12:21:49, 12:21:50, 12:22:40.","1. Snapshot (seq 1043) loaded first; queue equals the counter board.
+2. Ignored.
+3. Live; Reconnecting with last update time and grayed queue; full-width Not live banner.",FR-TIL-11,BR-045; BR-020,US-041,Automated,Pass,
+TC-TIL-013,"Board alerts, alert list and sound unlock",TIL,Usability,Equivalence partitioning,P2,Counter board in a fresh browser,orders.csv: SQ-0315,"1. Open the board; tap Start board.
+2. Place, update and customer-cancel SQ-0315; mark another Ready.
+3. Raise 63 alerts; open the alert list.","1. Full screen; sound unlocked.
+2. Sound and message for the three events; silent refresh for Ready.
+3. 50 most recent alerts listed.",FR-TIL-12,,US-039,Manual,Pass,
+TC-TIL-014,Daily operations summary,TIL,Functional,BVA,P2,Station Quarter data for 2026-09-14 to 2026-09-18,orders.csv: Station Quarter,"1. Open the summary for 2026-09-18.
+2. Check orders for 12:31 marked Ready at 12:30:40, 12:31:59, 12:32:00.
+3. Marta and Paul open the branch selector.
+4. Export 2026-09-14 to 2026-09-18.","1. Per-channel and total figures.
+2. On time, on time, late.
+3. Marta: Station Quarter only; Paul: all.
+4. CSV, one row per branch, day and channel.",FR-TIL-13,,US-042,Automated,Pass,
+TC-NFR-001,"Load at 1.5 x peak: slots, placement and errors",NFR,Performance,Load test,P1,Staging sized as production; 1.5 x Friday rush profile for 60 min,Load and fault profiles in the test strategy,"1. Run the load profile.
+2. Collect p95 for pickup-slots and orders, and the error rate.",2. Slots p95 <= 800 ms; placement p95 <= 1.5 s; errors < 0.5%.,NFR-PERF-01; NFR-PERF-02; NFR-PERF-05,,,Automated,Pass,
+TC-NFR-002,Live propagation latency,NFR,Performance,Synthetic monitoring,P1,Probe order every 5 min during opening hours for 5 days,Load and fault profiles in the test strategy,"1. Place, update and mark Ready probe orders; measure event-to-render on boards, tills and the app.",1. p95 <= 2 s; p99 <= 5 s.,NFR-PERF-03,,,Automated,Pass,
+TC-NFR-003,Till responsiveness on the oldest supported iPad,NFR,Performance,Device test,P1,"iPad 9th generation, iPadOS 16",Load and fault profiles in the test strategy,"1. Measure tile tap to dialog 50 times.
+2. Measure cash tap to ""Order placed"" 50 times.","1. p95 <= 300 ms.
+2. p95 <= 1 s.",NFR-PERF-04,,,Manual,Pass,
+TC-NFR-004,Chaos test: 100 forced disconnects,NFR,Reliability,Fault injection,P1,Two tills and two boards; event generator at 2 events per second,Load and fault profiles in the test strategy,"1. Force 100 random disconnects of 5-90 s.
+2. Compare each client's state with the server after each reconnect.",2. Current state within 5 s of each reconnect; zero missed events; Reconnecting shown after 10 s.,NFR-REL-02,,,Automated,Pass,
+TC-NFR-005,POS provider outage for 60 minutes,NFR,Reliability,Fault injection,P1,POS sandbox blocked for 60 min during a load run,Load and fault profiles in the test strategy,"1. Place and pay 300 orders during the outage.
+2. Restore the POS.","1. Ordering, payment and boards unaffected.
+2. All invoices raised within 15 min; zero duplicates.",NFR-REL-04,,,Automated,Pass,
+TC-NFR-006,Restore drill,NFR,Reliability,Restore test,P1,Monthly drill into staging (2026-09-08),Load and fault profiles in the test strategy,"1. Restore the latest backup and replay the oplog.
+2. Compare order and payment checksums.","1. Data loss window <= 5 min; service restored <= 2 h.
+2. Checksums match.",NFR-REL-03,,,Manual,Pass,
+TC-NFR-007,"Transport security, tokens, ASVS and card data scope",NFR,Security,Inspection and scan,P1,Staging; latest pen test report,Load and fault profiles in the test strategy,"1. TLS scan all endpoints.
+2. Use an access token after 15 min.
+3. Connect a socket without a token.
+4. Search the database and logs for card numbers.
+5. Review the ASVS L2 checklist.","1. TLS 1.2+, HSTS.
+2. 401.
+3. Refused.
+4. Only brand and last 4 digits found.
+5. Complete; no open Critical or High.",NFR-SEC-01; NFR-SEC-02; NFR-SEC-03,,,Automated,Pass,
+TC-NFR-008,Secrets never reach clients; audit trail complete,NFR,Security,Inspection and test,P1,Proxy capturing all client traffic,Load and fault profiles in the test strategy,"1. Capture traffic of all four apps for a full order cycle.
+2. Perform the 9 audited actions.","1. No provider key, POS token or SMTP credential in any payload.
+2. One audit event per action with before and after values.",NFR-SEC-04; NFR-SEC-05,,,Automated,Pass,
+TC-NFR-009,"Privacy: minimization, erasure and EU residency",NFR,Security,Inspection and test,P1,DPIA checklist; staging,Load and fault profiles in the test strategy,"1. Inspect kitchen board, till queue, push and email payloads, logs and error reports.
+2. Delete an account and run erasure.
+3. Check the hosting, backup and processor register.","1. No email or phone outside the counter board; no items in push or email.
+2. Personal data erased; financial records kept anonymized.
+3. All in the EU; DPAs listed.",NFR-PRIV-01; NFR-PRIV-02; NFR-PRIV-03,,,Manual,Pass,
+TC-NFR-010,WCAG 2.2 AA on the ordering flow,NFR,Accessibility,Inspection and assistive technology,P1,"iOS VoiceOver, Android TalkBack, axe on web",Load and fault profiles in the test strategy,"1. Complete an order with VoiceOver and TalkBack.
+2. Run automated checks on web.
+3. Use 200% text size.","1. Every control announced with name and state.
+2. No AA violations.
+3. No loss of content.",NFR-ACC-01,,,Manual,Fail,"DEF-069 (TalkBack reads pickup minutes as ""button"" without the time; fix planned for R1.3)"
+TC-NFR-011,Boards never rely on color alone,NFR,Accessibility,Inspection,P1,24-inch display at 2 m,Load and fault profiles in the test strategy,"1. Check contrast of black text on all 16 palette colors.
+2. View every tint and status in grayscale.","1. 4.5:1 or more.
+2. Every state identifiable by label, icon or pattern.",NFR-ACC-02,,,Manual,Pass,
+TC-NFR-012,Usability timings and messages,NFR,Usability,Timed tasks,P1,"UAT participants: 8 customers, 6 counter staff",Load and fault profiles in the test strategy,"1. Customers place a non-customized order (pay at counter).
+2. Counter staff run the US-036 walk-in script.
+3. Review all messages against SRS field specs.","1. 6 taps or fewer.
+2. Median 50 s or less (UAT 41 s).
+3. Each states problem and fix.",NFR-USE-01; NFR-USE-02; NFR-USE-03,,,Manual,Pass,
+TC-NFR-013,Device and browser matrix; forced update; additive API,NFR,Compatibility,Matrix test,P1,Device lab; contract diff in CI,Load and fault profiles in the test strategy,"1. Run smoke tests on the matrix.
+2. Set minimum app version above the installed one.
+3. Diff the contract against the last release.","1. All pass.
+2. Non-dismissible update prompt.
+3. Only additive changes.",NFR-CMP-01; NFR-MNT-02,,,Automated,Pass,
+TC-NFR-014,"Anomaly alerts, till error monitoring and localization",NFR,Reliability,Alert drill,P1,Staging alert routing to the test on-call,Load and fault profiles in the test strategy,"1. Trigger alerts (a) to (e).
+2. Crash the till.
+3. Switch the app language.","1. Each pages within 5 min.
+2. Report with release and branch tags, no personal data.
+3. All strings switch; euros and 24-hour times formatted.",NFR-OBS-01; NFR-OBS-02; NFR-L10N-01,,,Automated,Pass,
